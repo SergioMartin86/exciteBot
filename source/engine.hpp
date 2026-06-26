@@ -13,17 +13,23 @@
  *   - serialize()/deserialize()                   -- tiny state
  *   - lram()    = the 2048-byte modeled RAM image -- for the byte-for-byte tas.ram fidelity gate
  *
- * FIDELITY STATUS (2026-06-26): validated EXACT against tas.ram (seeded from frame 0) for frames 0..66
- * (the opening flat cruise) on the modeled physics addresses: velX, posX (0x50/0x394/0x60/0x3BF/0x4E),
- * and engine temperature (0x3B6/0x3B5 -- the temperature routine alone matches all 2263 frames). The
- * position update ($DA58 + $DBFE) and temperature routine ($E36B) are byte-exact ports of the 6502 code.
+ * MODE: REWARD-FIDELITY-FIRST (per user) -- model exactly what determines posX (the reward); ignore
+ * cosmetic state (the ground vertical bob velZ/posZ/posY, sprites, RNG, loop bookkeeping).
  *
- * NEXT FRONTIER: at frame 67 the bike reaches the first terrain geometry (velZ/posZ/posY begin moving on
- * the approach to a hill/ramp). Going further needs the TRACK TERRAIN PROFILE (§8 -- the make-or-break
- * blocker) plus vertical/airborne integration, downhill over-cap (§4g), takeoff/arc/landing (§4c-§4e) --
- * all stubbed/TODO. Seed frame 0 from tas.ram (Engine::seedFromRam) as a stand-in for the un-modeled
- * boot sequence. Deferred (track-layout bookkeeping, not core physics): loop counters 0x57/0xED/0x3A4
- * and the Race Over win flag 0x52.
+ * FIDELITY STATUS (2026-06-26): the REWARD addresses (velX 0x90/0x94, posX 0x50/0x394/0x60/0x3BF/0x4E)
+ * are validated EXACT against tas.ram (seeded from frame 0) for frames 0..340 -- the entire run up to the
+ * first jump -- with a fully PREDICTIVE model:
+ *   - position update ($DA58 + $DBFE), byte-exact port;
+ *   - game cycle 0x4C (mod-4 counter) gating the player speed routine;
+ *   - speed routine: accel ($CE29) below cap, nothing at cap, friction[Y+1] ($CE58) over cap, coast
+ *     friction[0]; Y = A/A+B->0, B->1 (sub_CD59). Tables tbl_C0BC/C0C1/C0CE/C0D1 exact;
+ *   - temperature ($E36B) byte-exact (matches all 2263 frames in isolation).
+ *
+ * NEXT (to continue past frame 340): the bike launches off the first ramp at frame 339. velX is constant
+ * while airborne, so reward stays exact through jumps ONCE airMode is known -- but the engine doesn't yet
+ * model airMode transitions, so it wrongly applies ground coast-friction in the air (832->776 at f341).
+ * Need: ramp detection + the airborne arc (§4d, un-traced) to drive airMode, and the downhill over-cap
+ * velX boosts (§4g, frames 1063/1132/1196/1980/2022 -- final velX 2272). Seed frame 0 from tas.ram.
  */
 
 #include <cstdint>
@@ -113,6 +119,10 @@ public:
   /// @brief Advance one frame. @p controllerByte is the jaffar joypad code (A=0x01 .. R=0x80).
   void advance(uint8_t controllerByte)
   {
+    // 0) Advance the game cycle (0x4C): a mod-4 counter over the 4 objects (player + 3 opponents).
+    //    The player's speed routine is gated on 0x4C == 0 (verified: 0x4C == (frame-1) mod 4).
+    _mem[A_GAME_CYCLE] = (uint8_t)((_mem[A_GAME_CYCLE] + 1) & 3);
+
     // 1) Latch the controller into the throttle/lean RAM byte (NES reads MSB-first => bit-reversed).
     _mem[A_THROTTLE] = reverse8(controllerByte);
 
@@ -177,10 +187,12 @@ public:
   }
 
 private:
-  // ---- Physics tables (handoff §4a/§4b; bytes lifted from the annotated disassembly) -----------
-  // Ground speed, indexed by throttle Y: 0=A(slow), 1=B(turbo), 2=track-finished.
-  static constexpr uint16_t kSpeedCap[3]   = {800, 832, 383}; // 0x0320, 0x0340, 0x017F
-  static constexpr uint16_t kSpeedAccel[3] = {24, 63, 40};    // tbl_C0BC[0..2]
+  // ---- Physics tables (bytes lifted from the annotated disassembly) ---------------------------
+  static constexpr uint8_t  kAccel[3]    = {24, 63, 40};                      // tbl_C0BC[0..2]
+  static constexpr uint8_t  kFriction[7] = {56, 12, 0, 60, 28, 192, 127};     // tbl_C0C1
+  static constexpr uint8_t  kCapLo[3]    = {0x20, 0x40, 0x7F};                // tbl_C0CE
+  static constexpr uint8_t  kCapHi[3]    = {0x03, 0x03, 0x01};                // tbl_C0D1
+  static constexpr uint8_t  kFricFloor[2]= {0x01, 0xB0};                      // tbl_C0CC[airMode>>1]
   // Engine temperature, indexed by throttle Y: 0=coast, 1=B, 2=A, 3=A+B (tbl_D8FB/tbl_D8F7).
   static constexpr uint8_t  kTempEquil[4]  = {8, 32, 17, 17};
   static constexpr uint8_t  kTempRate[4]   = {63, 15, 7, 7};
@@ -191,30 +203,46 @@ private:
     _mem[A_VELX_HI] = (uint8_t)(v >> 8);
   }
 
+  // Add the accel term for index Y, then clamp DOWN to the cap if it reached/exceeded it (sub_CE29).
+  void applyAccel(int y)
+  {
+    uint16_t lo = (uint16_t)_mem[A_VELX_LO] + kAccel[y];
+    _mem[A_VELX_LO] = (uint8_t)(lo & 0xFF);
+    if (lo > 0xFF) _mem[A_VELX_HI]++;
+    if (_mem[A_VELX_HI] > kCapHi[y] || (_mem[A_VELX_HI] == kCapHi[y] && _mem[A_VELX_LO] >= kCapLo[y]))
+    { _mem[A_VELX_LO] = kCapLo[y]; _mem[A_VELX_HI] = kCapHi[y]; }
+  }
+
+  // Subtract the friction term for index Y: velXlo -= friction[Y]; on borrow, velXhi-- (sub_CE58).
+  // When velXhi==0 a floor (tbl_C0CC[airMode>>1]) prevents decelerating below a minimum crawl.
+  void applyFriction(int y)
+  {
+    if (_mem[A_VELX_HI] == 0 && _mem[A_VELX_LO] < kFricFloor[(_mem[A_AIRMODE] >> 1) & 1]) return;
+    const int lo = (int)_mem[A_VELX_LO] - kFriction[y];
+    _mem[A_VELX_LO] = (uint8_t)(lo & 0xFF);
+    if (lo < 0 && _mem[A_VELX_HI] != 0) _mem[A_VELX_HI]--;
+  }
+
   void stepSpeed()
   {
-    const uint8_t thr = _mem[A_THROTTLE];
-    if (_mem[A_AIRMODE] != 0) return; // airborne: velX constant (air-friction ~0) -- §4d (validated)
+    // Player speed routine (sub_CD59 -> accel sub_CE29 / friction sub_CE58), gated by the game cycle:
+    // it runs for the player ONLY when 0x4C == 0 (CPX ram_004C; BNE RTS). 0x4C == (frame-1) mod 4.
+    if (_mem[A_GAME_CYCLE] != 0) return;
+    // Airborne: velX is ~constant (validated). The exact air-friction path (sub_CD59 $CDB2) is modeled
+    // later; for now hold velX. TODO(§4d air friction edge frames).
+    if (_mem[A_AIRMODE] != 0) return;
 
-    uint16_t v = velX16();
-    if (thr & 0x80) // A held -> Y0
-    {
-      v = (uint16_t)(v + kSpeedAccel[0]);
-      if (v > kSpeedCap[0]) v = kSpeedCap[0];
-      setVelX16(v);
-    }
-    else if (thr & 0x40) // B held -> Y1 (the flat-cruise case: pins velX at the 832 cap)
-    {
-      v = (uint16_t)(v + kSpeedAccel[1]);
-      if (v > kSpeedCap[1]) v = kSpeedCap[1];
-      setVelX16(v);
-    }
-    else
-    {
-      // Coast: with no button the accel/clamp routine never runs, so on a downhill gravity pushes
-      // velX past the flat cap to the slope's terminal velocity (832->1088->...->1544). The exact
-      // arithmetic is slope-driven and NOT yet traced. TODO(handoff §4g) -- needs the terrain profile.
-    }
+    const uint8_t ab = _mem[A_THROTTLE] & 0xC0;
+    if (ab == 0) { applyFriction(0); return; }       // coast -> friction Y=0
+    const int y = (_mem[A_THROTTLE] & 0x80) ? 0 : 1; // A (or A+B) -> Y0 cap 800; B only -> Y1 cap 832
+
+    const uint8_t vhi = _mem[A_VELX_HI], vlo = _mem[A_VELX_LO];
+    if (vhi > kCapHi[y] || (vhi == kCapHi[y] && vlo > kCapLo[y])) applyFriction(y + 1); // over cap -> friction[Y+1]
+    else if (vhi == kCapHi[y] && vlo == kCapLo[y]) { /* exactly at cap: do nothing */ }
+    else applyAccel(y);                                                                 // below cap -> accel[Y]
+
+    // NOTE: the over-cap downhill velX boosts (§4g, frames 1063/1132/1196/1980/2022 -- 0x4C != 0) are a
+    // SEPARATE mechanism (downhill ramp launch), not this gated routine. TODO: trace + model that.
   }
 
   void stepTemperature()
