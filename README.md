@@ -26,6 +26,33 @@ is a phantom. Two disciplines enforce this:
 | `memory_disassembly-findings.md` | Dense reverse-engineering notes (companion to the handoff doc). |
 | `reference/` | Self-contained kit to reproduce/verify the reference TAS on the real emulator. See `REPRODUCE_REFERENCE.md`. |
 | `REPRODUCE_REFERENCE.md` | How to use `jaffar-player` to replay the reference and (re)generate `tas.ram`. |
+| `source/engine.hpp` | The native C++ physics engine (`excitebike::Engine`) — the emulator replacement. |
+| `source/player.cpp` | `exciteBike-player`: replays a `.sol` movie through the engine, mirroring `jaffar-player` (`--dumpRam`, `--printFinalState`). |
+| `extern/jaffarCommon` | Git submodule — provides the JSON / string / file tooling `jaffar-player` uses. |
+
+## Building
+
+[meson](https://mesonbuild.com) + [ninja](https://ninja-build.org), C++20. The `jaffarCommon` submodule
+must be present (`git submodule update --init`).
+
+```bash
+meson setup build
+ninja -C build
+```
+
+This produces `build/source/exciteBike-player`. Replay the reference movie through the **native engine**
+(seed frame 0 from `tas.ram`, since the boot/countdown isn't modeled yet):
+
+```bash
+./build/source/exciteBike-player reference/race01.jaffar reference/race01.sol \
+    --printFinalState --initialRam tas.ram --dumpRam native.ram
+# then diff native.ram against tas.ram to find the first divergence (the fidelity gate, handoff §9.4)
+```
+
+> **Status:** scaffold. `engine.hpp` implements the validated pieces (input→`0x5C` decode, the B/A speed
+> caps, air-velX-constant, engine temperature, posX/block integration); the terrain profile (§8),
+> downhill over-cap (§4g), and takeoff/arc/landing (§4c–§4e) are stubbed `// TODO`. The engine therefore
+> does **not** yet reproduce `tas.ram` past the flat cruise — that is the next milestone.
 
 ## Reward / win
 - **Reward = `Bike Pos X` ONLY** (no momentum/speed/other metric).
