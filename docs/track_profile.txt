@@ -1,0 +1,285 @@
+# Track profile of the reference race (2263 frames, finishes at the Race Over flag)
+
+     frames  kind slope  posX_start   posX_end       velX    angle
+    0-  328  GND     0        0.00    1109.58     0-> 832    6->  6
+  329-  330  GND     5     1112.83    1117.08   832-> 832    7->  7
+  331-  338  GND     6     1120.33    1146.08   832-> 832    9->  9
+  339-  340  AIR     6     1149.33    1153.58   832-> 832    9->  8
+  341-  343  AIR     0     1156.83    1164.33   832-> 832    8->  8
+  344-  352  AIR     1     1167.58    1197.58   832-> 832    9-> 11
+  353-  415  AIR     0     1200.83    1427.33   832-> 832   11->  4
+  416-  429  GND     0     1431.58    1478.83   832-> 832    3->  5
+  430-  431  GND     5     1482.08    1486.33   832-> 832    7->  7
+  432-  435  GND     6     1489.58    1500.33   832-> 832    9->  9
+  436-  436  AIR     6     1504.58    1504.58   832-> 832   10-> 10
+  437-  438  AIR     0     1507.83    1512.08   832-> 832   10-> 10
+  439-  444  AIR     1     1515.33    1533.58   832-> 832   10-> 11
+  445-  491  AIR     0     1536.83    1705.33   832-> 832   11->  7
+  492-  562  GND     0     1708.58    1965.08   832-> 832    6-> 11
+  563-  564  GND     5     1968.33    1972.58   832-> 832    7->  7
+  565-  568  GND     6     1975.83    1986.58   832-> 832    9->  9
+  569-  569  AIR     6     1990.83    1990.83   832-> 832    9->  9
+  570-  572  AIR     0     1994.08    2001.58   832-> 832    9->  9
+  573-  578  AIR     1     2004.83    2023.08   832-> 832    9-> 10
+  579-  581  AIR     0     2027.33    2034.83   832-> 832   11-> 11
+  582-  586  AIR     6     2038.08    2053.08   832-> 832   11-> 11
+  587-  589  AIR     0     2056.33    2063.83   832-> 832   11-> 11
+  590-  594  AIR     1     2067.08    2082.08   832-> 832   11-> 11
+  595-  642  AIR     0     2085.33    2257.08   832-> 832   11->  3
+  643-  736  GND     0     2261.33    2601.58   832-> 832    2->  6
+  737-  737  GND     5     2604.83    2604.83   832-> 832    7->  7
+  738-  741  GND     6     2608.08    2619.83   832-> 832    9->  9
+  742-  742  AIR     6     2623.08    2623.08   832-> 832   10-> 10
+  743-  745  AIR     0     2626.33    2633.83   832-> 832   10-> 10
+  746-  750  AIR     1     2638.08    2652.08   832-> 832   11-> 11
+  751-  756  AIR     0     2656.33    2674.58   832-> 832   11-> 11
+  757-  761  AIR     6     2677.83    2692.83   832-> 832   11-> 11
+  762-  764  AIR     0     2696.08    2703.58   832-> 832   11-> 11
+  765-  770  AIR     1     2706.83    2725.08   832-> 832   11-> 11
+  771-  773  AIR     0     2729.33    2736.83   832-> 832   11-> 11
+  774-  778  AIR     6     2740.08    2755.08   832-> 832   11-> 11
+  779-  781  AIR     0     2758.33    2765.83   832-> 832   11-> 11
+  782-  786  AIR     1     2769.08    2784.08   832-> 832   11-> 10
+  787-  819  AIR     0     2787.33    2904.33   832-> 832   10->  2
+  820-  909  GND     0     2908.58    3233.83   832-> 832    2->  6
+  910-  911  GND     5     3237.08    3241.33   832-> 832    7->  7
+  912-  918  GND     6     3244.58    3267.08   832-> 832    9->  9
+  919-  921  AIR     0     3270.33    3277.83   832-> 832   10-> 10
+  922-  925  AIR     3     3281.08    3291.83   832-> 832   10-> 11
+  926-  938  AIR     0     3296.08    3340.08   832-> 832   11-> 11
+  939-  942  AIR     4     3343.33    3354.08   832-> 832   11-> 11
+  943-  946  AIR     0     3358.33    3369.08   832-> 832   11-> 11
+  947-  953  AIR     1     3372.33    3394.83   832-> 832   11-> 11
+  954-  979  AIR     0     3398.08    3489.33   832-> 832   11->  6
+  980- 1056  GND     0     3493.58    3771.39   832-> 832    6->  6
+ 1057- 1057  GND     5     3774.64    3774.64   832-> 832    7->  7
+ 1058- 1062  GND     6     3777.89    3792.89   832-> 832    9->  9
+ 1063- 1120  AIR     0     3798.14    4070.39  1088->1088    8->  6
+ 1121- 1126  GND     0     4074.64    4098.89  1088->1088    6->  6
+ 1127- 1128  GND     5     4104.14    4108.39  1088->1088    7->  7
+ 1129- 1131  GND     6     4113.64    4123.14  1088->1088    9->  9
+ 1132- 1192  AIR     0     4128.39    4469.58  1344->1288    8->  7
+ 1193- 1194  AIR     6     4475.61    4480.64  1288->1288    7->  7
+ 1195- 1195  GND     6     4486.67    4486.67  1288->1288    8->  8
+ 1196- 1197  AIR     0     4493.70    4500.73  1544->1544    8->  8
+ 1198- 1199  AIR     6     4506.77    4513.80  1544->1544    8->  9
+ 1200- 1200  AIR     0     4520.83    4520.83  1544->1544    9->  9
+ 1201- 1202  AIR     1     4527.86    4533.89  1544->1544    9->  9
+ 1203- 1205  AIR     0     4540.92    4554.98  1544->1544   10-> 10
+ 1206- 1206  AIR     6     4561.02    4561.02  1544->1544   10-> 10
+ 1207- 1207  AIR     0     4568.05    4568.05  1544->1544   11-> 11
+ 1208- 1209  AIR     1     4575.08    4582.11  1544->1544   11-> 11
+ 1210- 1212  AIR     0     4588.14    4602.20  1544->1544   11-> 11
+ 1213- 1213  AIR     6     4609.23    4609.23  1544->1544   11-> 11
+ 1214- 1215  AIR     0     4615.27    4622.30  1544->1544   11-> 11
+ 1216- 1216  AIR     1     4629.33    4629.33  1544->1544   11-> 11
+ 1217- 1247  AIR     0     4636.36    4839.30  1544->1544   11-> 11
+ 1248- 1251  AIR     6     4846.33    4866.42  1544->1544   11-> 11
+ 1252- 1252  AIR     0     4873.45    4873.45  1544->1544   11-> 11
+ 1253- 1255  AIR     3     4880.48    4893.55  1544->1544   11-> 11
+ 1256- 1301  AIR     0     4900.58    5205.98  1544->1544   11->  3
+ 1302- 1307  AIR     5     5213.02    5247.17  1544->1544    3->  2
+ 1308- 1309  AIR     0     5253.20    5260.23  1544->1544    2->  2
+ 1310- 1313  AIR     2     5267.27    5287.36  1544->1544    2->  2
+ 1314- 1335  AIR     0     5294.39    5437.05  1544->1544    2->  2
+ 1336- 1338  AIR     5     5443.08    5457.14  1544->1544    2->  2
+ 1339- 1341  GND     5     5464.17    5477.23  1544->1544    2->  3
+ 1342- 1343  AIR     0     5484.27    5491.30  1544->1544    3->  4
+ 1344- 1347  AIR     2     5497.33    5518.42  1544->1544    4->  5
+ 1348- 1350  AIR     0     5524.45    5538.52  1544->1544    5->  5
+ 1351- 1356  AIR     5     5545.55    5578.70  1544->1544    6->  7
+ 1357- 1358  AIR     0     5585.73    5592.77  1544->1544    7->  7
+ 1359- 1363  AIR     2     5599.80    5626.92  1544->1544    8->  9
+ 1364- 1461  AIR     0     5632.95    6291.98  1544->1544    9-> 11
+ 1462- 1465  AIR     6     6298.02    6319.11  1544->1544   11-> 11
+ 1466- 1473  AIR     0     6325.14    6373.36  1544->1544   11->  9
+ 1474- 1477  AIR     1     6379.39    6400.48  1544->1544    9->  8
+ 1478- 1484  AIR     0     6406.52    6447.70  1544->1544    8->  6
+ 1485- 1582  GND     0     6454.73    7112.77  1544->1544    6->  6
+ 1583- 1583  GND     5     7119.80    7119.80  1544->1544    7->  7
+ 1584- 1587  GND     6     7125.83    7146.92  1544->1544    9->  9
+ 1588- 1589  AIR     6     7152.95    7159.98  1544->1544    8->  8
+ 1590- 1590  AIR     0     7167.02    7167.02  1544->1544    8->  8
+ 1591- 1595  AIR     1     7174.05    7201.17  1544->1544    8->  7
+ 1596- 1637  AIR     0     7207.20    7485.48  1544->1544    6->  2
+ 1638- 1640  AIR     6     7492.52    7506.58  1544->1544    2->  2
+ 1641- 1641  AIR     0     7512.61    7512.61  1544->1544    2->  2
+ 1642- 1644  AIR     1     7519.64    7533.70  1544->1544    2->  2
+ 1645- 1709  AIR     0     7539.73    7974.73  1544->1544    2->  4
+ 1710- 1712  AIR     6     7980.77    7994.83  1544->1544    4->  5
+ 1713- 1713  AIR     0     8001.86    8001.86  1544->1544    5->  5
+ 1714- 1716  AIR     1     8007.89    8021.95  1544->1544    5->  6
+ 1717- 1719  AIR     0     8028.98    8042.05  1544->1544    6->  6
+ 1720- 1720  GND     0     8049.08    8049.08  1544->1544    5->  5
+ 1721- 1722  GND     6     8056.11    8062.14  1544->1544    8->  8
+ 1723- 1723  AIR     6     8069.17    8069.17  1544->1544    8->  8
+ 1724- 1724  AIR     0     8076.20    8076.20  1544->1544    9->  9
+ 1725- 1727  AIR     1     8083.23    8096.30  1544->1544    9->  9
+ 1728- 1803  AIR     0     8103.33    8611.67  1544->1544   10->  2
+ 1804- 1806  AIR     6     8618.70    8632.77  1544->1544    3->  3
+ 1807- 1807  AIR     0     8638.80    8638.80  1544->1544    3->  3
+ 1808- 1810  AIR     1     8645.83    8659.89  1544->1544    4->  4
+ 1811- 1814  AIR     0     8665.92    8687.02  1544->1544    4->  5
+ 1815- 1815  AIR     6     8694.05    8694.05  1544->1544    5->  5
+ 1816- 1816  GND     6     8700.08    8700.08  1544->1544    6->  6
+ 1817- 1818  AIR     0     8707.11    8714.14  1544->1544    6->  6
+ 1819- 1821  AIR     1     8721.17    8734.23  1544->1544    6->  7
+ 1822- 1896  AIR     0     8741.27    9243.58  1544->1544    7-> 11
+ 1897- 1900  AIR     6     9249.61    9270.70  1544->1544   11-> 11
+ 1901- 1902  AIR     0     9276.73    9283.77  1544->1544   11-> 11
+ 1903- 1904  AIR     3     9290.80    9297.83  1544->1544   11-> 11
+ 1905- 1912  AIR     0     9303.86    9352.08  1544->1544   11-> 10
+ 1913- 1914  AIR     4     9358.11    9365.14  1544->1544   10-> 10
+ 1915- 1916  AIR     0     9372.17    9379.20  1544->1544   10->  9
+ 1917- 1920  AIR     1     9385.23    9406.33  1544->1544    9->  8
+ 1921- 1967  AIR     0     9412.36    9724.80  1544->1544    8->  6
+ 1968- 1976  GND     0     9731.83    9786.08  1544->1544    5->  6
+ 1977- 1977  GND     5     9793.06    9793.06  1532->1532    7->  7
+ 1978- 1979  GND     6     9799.05    9806.03  1532->1532    9->  9
+ 1980- 2019  AIR     0     9814.02   10120.41  1788->1788   10-> 11
+ 2020- 2021  GND     6    10128.39   10136.38  1788->1788   11-> 10
+ 2022- 2058  AIR     0    10144.36   10432.80  2044->2044   10-> 11
+ 2059- 2060  GND     6    10440.78   10448.77  2044->2044   11-> 10
+ 2061- 2062  AIR     0    10457.75   10466.73  2300->2300    9->  9
+ 2063- 2063  AIR     6    10475.72   10475.72  2300->2300    9->  9
+ 2064- 2064  AIR     0    10484.70   10484.70  2300->2300    9->  9
+ 2065- 2065  AIR     1    10493.58   10493.58  2272->2272    9->  9
+ 2066- 2069  AIR     0    10502.45   10530.08  2272->2272    8->  8
+ 2070- 2071  AIR     1    10538.95   10547.83  2272->2272    9->  9
+ 2072- 2158  AIR     0    10556.70   11328.95  2272->2272    9->  5
+ 2159- 2165  GND     0    11338.83   11392.08  2272->2272    5->  6
+ 2166- 2262  AIR     0    11400.95   12157.33  2272->1256    8-> 11
+
+# Jumps (airborne stretches): 113
+  launch frame   339 @posX  1149.33  -> land frame   341 @posX  1153.58  (2 frames aloft, velX 832)
+  launch frame   341 @posX  1156.83  -> land frame   344 @posX  1164.33  (3 frames aloft, velX 832)
+  launch frame   344 @posX  1167.58  -> land frame   353 @posX  1197.58  (9 frames aloft, velX 832)
+  launch frame   353 @posX  1200.83  -> land frame   416 @posX  1427.33  (63 frames aloft, velX 832)
+  launch frame   436 @posX  1504.58  -> land frame   437 @posX  1504.58  (1 frames aloft, velX 832)
+  launch frame   437 @posX  1507.83  -> land frame   439 @posX  1512.08  (2 frames aloft, velX 832)
+  launch frame   439 @posX  1515.33  -> land frame   445 @posX  1533.58  (6 frames aloft, velX 832)
+  launch frame   445 @posX  1536.83  -> land frame   492 @posX  1705.33  (47 frames aloft, velX 832)
+  launch frame   569 @posX  1990.83  -> land frame   570 @posX  1990.83  (1 frames aloft, velX 832)
+  launch frame   570 @posX  1994.08  -> land frame   573 @posX  2001.58  (3 frames aloft, velX 832)
+  launch frame   573 @posX  2004.83  -> land frame   579 @posX  2023.08  (6 frames aloft, velX 832)
+  launch frame   579 @posX  2027.33  -> land frame   582 @posX  2034.83  (3 frames aloft, velX 832)
+  launch frame   582 @posX  2038.08  -> land frame   587 @posX  2053.08  (5 frames aloft, velX 832)
+  launch frame   587 @posX  2056.33  -> land frame   590 @posX  2063.83  (3 frames aloft, velX 832)
+  launch frame   590 @posX  2067.08  -> land frame   595 @posX  2082.08  (5 frames aloft, velX 832)
+  launch frame   595 @posX  2085.33  -> land frame   643 @posX  2257.08  (48 frames aloft, velX 832)
+  launch frame   742 @posX  2623.08  -> land frame   743 @posX  2623.08  (1 frames aloft, velX 832)
+  launch frame   743 @posX  2626.33  -> land frame   746 @posX  2633.83  (3 frames aloft, velX 832)
+  launch frame   746 @posX  2638.08  -> land frame   751 @posX  2652.08  (5 frames aloft, velX 832)
+  launch frame   751 @posX  2656.33  -> land frame   757 @posX  2674.58  (6 frames aloft, velX 832)
+  launch frame   757 @posX  2677.83  -> land frame   762 @posX  2692.83  (5 frames aloft, velX 832)
+  launch frame   762 @posX  2696.08  -> land frame   765 @posX  2703.58  (3 frames aloft, velX 832)
+  launch frame   765 @posX  2706.83  -> land frame   771 @posX  2725.08  (6 frames aloft, velX 832)
+  launch frame   771 @posX  2729.33  -> land frame   774 @posX  2736.83  (3 frames aloft, velX 832)
+  launch frame   774 @posX  2740.08  -> land frame   779 @posX  2755.08  (5 frames aloft, velX 832)
+  launch frame   779 @posX  2758.33  -> land frame   782 @posX  2765.83  (3 frames aloft, velX 832)
+  launch frame   782 @posX  2769.08  -> land frame   787 @posX  2784.08  (5 frames aloft, velX 832)
+  launch frame   787 @posX  2787.33  -> land frame   820 @posX  2904.33  (33 frames aloft, velX 832)
+  launch frame   919 @posX  3270.33  -> land frame   922 @posX  3277.83  (3 frames aloft, velX 832)
+  launch frame   922 @posX  3281.08  -> land frame   926 @posX  3291.83  (4 frames aloft, velX 832)
+  launch frame   926 @posX  3296.08  -> land frame   939 @posX  3340.08  (13 frames aloft, velX 832)
+  launch frame   939 @posX  3343.33  -> land frame   943 @posX  3354.08  (4 frames aloft, velX 832)
+  launch frame   943 @posX  3358.33  -> land frame   947 @posX  3369.08  (4 frames aloft, velX 832)
+  launch frame   947 @posX  3372.33  -> land frame   954 @posX  3394.83  (7 frames aloft, velX 832)
+  launch frame   954 @posX  3398.08  -> land frame   980 @posX  3489.33  (26 frames aloft, velX 832)
+  launch frame  1063 @posX  3798.14  -> land frame  1121 @posX  4070.39  (58 frames aloft, velX 1088)
+  launch frame  1132 @posX  4128.39  -> land frame  1193 @posX  4469.58  (61 frames aloft, velX 1344)
+  launch frame  1193 @posX  4475.61  -> land frame  1195 @posX  4480.64  (2 frames aloft, velX 1288)
+  launch frame  1196 @posX  4493.70  -> land frame  1198 @posX  4500.73  (2 frames aloft, velX 1544)
+  launch frame  1198 @posX  4506.77  -> land frame  1200 @posX  4513.80  (2 frames aloft, velX 1544)
+  launch frame  1200 @posX  4520.83  -> land frame  1201 @posX  4520.83  (1 frames aloft, velX 1544)
+  launch frame  1201 @posX  4527.86  -> land frame  1203 @posX  4533.89  (2 frames aloft, velX 1544)
+  launch frame  1203 @posX  4540.92  -> land frame  1206 @posX  4554.98  (3 frames aloft, velX 1544)
+  launch frame  1206 @posX  4561.02  -> land frame  1207 @posX  4561.02  (1 frames aloft, velX 1544)
+  launch frame  1207 @posX  4568.05  -> land frame  1208 @posX  4568.05  (1 frames aloft, velX 1544)
+  launch frame  1208 @posX  4575.08  -> land frame  1210 @posX  4582.11  (2 frames aloft, velX 1544)
+  launch frame  1210 @posX  4588.14  -> land frame  1213 @posX  4602.20  (3 frames aloft, velX 1544)
+  launch frame  1213 @posX  4609.23  -> land frame  1214 @posX  4609.23  (1 frames aloft, velX 1544)
+  launch frame  1214 @posX  4615.27  -> land frame  1216 @posX  4622.30  (2 frames aloft, velX 1544)
+  launch frame  1216 @posX  4629.33  -> land frame  1217 @posX  4629.33  (1 frames aloft, velX 1544)
+  launch frame  1217 @posX  4636.36  -> land frame  1248 @posX  4839.30  (31 frames aloft, velX 1544)
+  launch frame  1248 @posX  4846.33  -> land frame  1252 @posX  4866.42  (4 frames aloft, velX 1544)
+  launch frame  1252 @posX  4873.45  -> land frame  1253 @posX  4873.45  (1 frames aloft, velX 1544)
+  launch frame  1253 @posX  4880.48  -> land frame  1256 @posX  4893.55  (3 frames aloft, velX 1544)
+  launch frame  1256 @posX  4900.58  -> land frame  1302 @posX  5205.98  (46 frames aloft, velX 1544)
+  launch frame  1302 @posX  5213.02  -> land frame  1308 @posX  5247.17  (6 frames aloft, velX 1544)
+  launch frame  1308 @posX  5253.20  -> land frame  1310 @posX  5260.23  (2 frames aloft, velX 1544)
+  launch frame  1310 @posX  5267.27  -> land frame  1314 @posX  5287.36  (4 frames aloft, velX 1544)
+  launch frame  1314 @posX  5294.39  -> land frame  1336 @posX  5437.05  (22 frames aloft, velX 1544)
+  launch frame  1336 @posX  5443.08  -> land frame  1339 @posX  5457.14  (3 frames aloft, velX 1544)
+  launch frame  1342 @posX  5484.27  -> land frame  1344 @posX  5491.30  (2 frames aloft, velX 1544)
+  launch frame  1344 @posX  5497.33  -> land frame  1348 @posX  5518.42  (4 frames aloft, velX 1544)
+  launch frame  1348 @posX  5524.45  -> land frame  1351 @posX  5538.52  (3 frames aloft, velX 1544)
+  launch frame  1351 @posX  5545.55  -> land frame  1357 @posX  5578.70  (6 frames aloft, velX 1544)
+  launch frame  1357 @posX  5585.73  -> land frame  1359 @posX  5592.77  (2 frames aloft, velX 1544)
+  launch frame  1359 @posX  5599.80  -> land frame  1364 @posX  5626.92  (5 frames aloft, velX 1544)
+  launch frame  1364 @posX  5632.95  -> land frame  1462 @posX  6291.98  (98 frames aloft, velX 1544)
+  launch frame  1462 @posX  6298.02  -> land frame  1466 @posX  6319.11  (4 frames aloft, velX 1544)
+  launch frame  1466 @posX  6325.14  -> land frame  1474 @posX  6373.36  (8 frames aloft, velX 1544)
+  launch frame  1474 @posX  6379.39  -> land frame  1478 @posX  6400.48  (4 frames aloft, velX 1544)
+  launch frame  1478 @posX  6406.52  -> land frame  1485 @posX  6447.70  (7 frames aloft, velX 1544)
+  launch frame  1588 @posX  7152.95  -> land frame  1590 @posX  7159.98  (2 frames aloft, velX 1544)
+  launch frame  1590 @posX  7167.02  -> land frame  1591 @posX  7167.02  (1 frames aloft, velX 1544)
+  launch frame  1591 @posX  7174.05  -> land frame  1596 @posX  7201.17  (5 frames aloft, velX 1544)
+  launch frame  1596 @posX  7207.20  -> land frame  1638 @posX  7485.48  (42 frames aloft, velX 1544)
+  launch frame  1638 @posX  7492.52  -> land frame  1641 @posX  7506.58  (3 frames aloft, velX 1544)
+  launch frame  1641 @posX  7512.61  -> land frame  1642 @posX  7512.61  (1 frames aloft, velX 1544)
+  launch frame  1642 @posX  7519.64  -> land frame  1645 @posX  7533.70  (3 frames aloft, velX 1544)
+  launch frame  1645 @posX  7539.73  -> land frame  1710 @posX  7974.73  (65 frames aloft, velX 1544)
+  launch frame  1710 @posX  7980.77  -> land frame  1713 @posX  7994.83  (3 frames aloft, velX 1544)
+  launch frame  1713 @posX  8001.86  -> land frame  1714 @posX  8001.86  (1 frames aloft, velX 1544)
+  launch frame  1714 @posX  8007.89  -> land frame  1717 @posX  8021.95  (3 frames aloft, velX 1544)
+  launch frame  1717 @posX  8028.98  -> land frame  1720 @posX  8042.05  (3 frames aloft, velX 1544)
+  launch frame  1723 @posX  8069.17  -> land frame  1724 @posX  8069.17  (1 frames aloft, velX 1544)
+  launch frame  1724 @posX  8076.20  -> land frame  1725 @posX  8076.20  (1 frames aloft, velX 1544)
+  launch frame  1725 @posX  8083.23  -> land frame  1728 @posX  8096.30  (3 frames aloft, velX 1544)
+  launch frame  1728 @posX  8103.33  -> land frame  1804 @posX  8611.67  (76 frames aloft, velX 1544)
+  launch frame  1804 @posX  8618.70  -> land frame  1807 @posX  8632.77  (3 frames aloft, velX 1544)
+  launch frame  1807 @posX  8638.80  -> land frame  1808 @posX  8638.80  (1 frames aloft, velX 1544)
+  launch frame  1808 @posX  8645.83  -> land frame  1811 @posX  8659.89  (3 frames aloft, velX 1544)
+  launch frame  1811 @posX  8665.92  -> land frame  1815 @posX  8687.02  (4 frames aloft, velX 1544)
+  launch frame  1815 @posX  8694.05  -> land frame  1816 @posX  8694.05  (1 frames aloft, velX 1544)
+  launch frame  1817 @posX  8707.11  -> land frame  1819 @posX  8714.14  (2 frames aloft, velX 1544)
+  launch frame  1819 @posX  8721.17  -> land frame  1822 @posX  8734.23  (3 frames aloft, velX 1544)
+  launch frame  1822 @posX  8741.27  -> land frame  1897 @posX  9243.58  (75 frames aloft, velX 1544)
+  launch frame  1897 @posX  9249.61  -> land frame  1901 @posX  9270.70  (4 frames aloft, velX 1544)
+  launch frame  1901 @posX  9276.73  -> land frame  1903 @posX  9283.77  (2 frames aloft, velX 1544)
+  launch frame  1903 @posX  9290.80  -> land frame  1905 @posX  9297.83  (2 frames aloft, velX 1544)
+  launch frame  1905 @posX  9303.86  -> land frame  1913 @posX  9352.08  (8 frames aloft, velX 1544)
+  launch frame  1913 @posX  9358.11  -> land frame  1915 @posX  9365.14  (2 frames aloft, velX 1544)
+  launch frame  1915 @posX  9372.17  -> land frame  1917 @posX  9379.20  (2 frames aloft, velX 1544)
+  launch frame  1917 @posX  9385.23  -> land frame  1921 @posX  9406.33  (4 frames aloft, velX 1544)
+  launch frame  1921 @posX  9412.36  -> land frame  1968 @posX  9724.80  (47 frames aloft, velX 1544)
+  launch frame  1980 @posX  9814.02  -> land frame  2020 @posX 10120.41  (40 frames aloft, velX 1788)
+  launch frame  2022 @posX 10144.36  -> land frame  2059 @posX 10432.80  (37 frames aloft, velX 2044)
+  launch frame  2061 @posX 10457.75  -> land frame  2063 @posX 10466.73  (2 frames aloft, velX 2300)
+  launch frame  2063 @posX 10475.72  -> land frame  2064 @posX 10475.72  (1 frames aloft, velX 2300)
+  launch frame  2064 @posX 10484.70  -> land frame  2065 @posX 10484.70  (1 frames aloft, velX 2300)
+  launch frame  2065 @posX 10493.58  -> land frame  2066 @posX 10493.58  (1 frames aloft, velX 2272)
+  launch frame  2066 @posX 10502.45  -> land frame  2070 @posX 10530.08  (4 frames aloft, velX 2272)
+  launch frame  2070 @posX 10538.95  -> land frame  2072 @posX 10547.83  (2 frames aloft, velX 2272)
+  launch frame  2072 @posX 10556.70  -> land frame  2159 @posX 11328.95  (87 frames aloft, velX 2272)
+  launch frame  2166 @posX 11400.95  -> land frame  2263 @posX 12157.33  (97 frames aloft, velX 2272)
+
+# Over-cap (downhill) ground stretches (velX > 832):
+  frames  1121- 1126 @posX  4074.64- 4098.89  slope 0  velX 1088->1088
+  frames  1127- 1128 @posX  4104.14- 4108.39  slope 5  velX 1088->1088
+  frames  1129- 1131 @posX  4113.64- 4123.14  slope 6  velX 1088->1088
+  frames  1195- 1195 @posX  4486.67- 4486.67  slope 6  velX 1288->1288
+  frames  1339- 1341 @posX  5464.17- 5477.23  slope 5  velX 1544->1544
+  frames  1485- 1582 @posX  6454.73- 7112.77  slope 0  velX 1544->1544
+  frames  1583- 1583 @posX  7119.80- 7119.80  slope 5  velX 1544->1544
+  frames  1584- 1587 @posX  7125.83- 7146.92  slope 6  velX 1544->1544
+  frames  1720- 1720 @posX  8049.08- 8049.08  slope 0  velX 1544->1544
+  frames  1721- 1722 @posX  8056.11- 8062.14  slope 6  velX 1544->1544
+  frames  1816- 1816 @posX  8700.08- 8700.08  slope 6  velX 1544->1544
+  frames  1968- 1976 @posX  9731.83- 9786.08  slope 0  velX 1544->1544
+  frames  1977- 1977 @posX  9793.06- 9793.06  slope 5  velX 1532->1532
+  frames  1978- 1979 @posX  9799.05- 9806.03  slope 6  velX 1532->1532
+  frames  2020- 2021 @posX 10128.39-10136.38  slope 6  velX 1788->1788
+  frames  2059- 2060 @posX 10440.78-10448.77  slope 6  velX 2044->2044
+  frames  2159- 2165 @posX 11338.83-11392.08  slope 0  velX 2272->2272

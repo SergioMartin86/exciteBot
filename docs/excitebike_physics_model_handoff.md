@@ -217,6 +217,15 @@ boundary was posX>6339 @ frame 1468.)*
 
 ## 8. THE BLOCKER & how to attack it: the track layout
 
+> **STATUS (2026-06-26): on-path profile EXTRACTED via path 2.** `tools/extract_track.py` walks `tas.ram`,
+> reconstructs absolute posX, and segments the race into (airMode, slope) runs → `docs/track_profile.txt`.
+> Findings: the track is a repeating **flat → ramp (slope 0→5→6) → jump → land** pattern (9 jumps in loop 1,
+> all at velX 832), then a **downhill/high-speed section** where velX breaks the 832 cap. The over-cap velX
+> escalates across the 4 loops: **832 → 1088 → 1288 → 1544 → 1788 → 2044 → 2272** (final), stepping ~+256 at
+> each downhill launch. The launch off a downhill ramp is where velX jumps (e.g. frame 1062→1063: 832→1088).
+> Modelling that over-cap accumulation (§4g) is the reward-critical un-traced piece. ROM path (1) is still
+> the fallback if off-path lanes ever matter.
+
 The physics needs the **terrain profile** — the slope/ramp/downhill at each X (and lane). The ground code
 reads it via a jump table indexed by terrain type:
 - `sub_E794` ($E794): `ASL; TAY; LDA tbl_E6B7,Y` → an indirect `JMP (tbl_E6B7+Y)` = a per-terrain-type
