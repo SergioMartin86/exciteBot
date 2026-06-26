@@ -13,15 +13,17 @@
  *   - serialize()/deserialize()                   -- tiny state
  *   - lram()    = the 2048-byte modeled RAM image -- for the byte-for-byte tas.ram fidelity gate
  *
- * FIDELITY STATUS (2026-06-26): this is the SCAFFOLD. The pieces validated in the reverse-engineering
- * (see docs/excitebike_physics_model_handoff.md) are implemented: input->0x5C decode, the B/A ground
- * speed caps, air-velX-is-constant, the engine-temperature model, and the posX/block-transition
- * integration. The pieces NOT yet traced are stubbed and marked `// TODO(handoff §...)`:
- *   - the track terrain profile (§8 -- the make-or-break blocker; slope/ramp/downhill per X)
- *   - the downhill over-cap acceleration (§4g)
- *   - takeoff / airborne-arc / landing resolve (§4c-§4e)
- * Until those land, advance() will NOT reproduce tas.ram beyond the flat-cruise segment. Seed the
- * frame-0 state from tas.ram (Engine::seedFromRam) as a stand-in for the un-modeled boot sequence.
+ * FIDELITY STATUS (2026-06-26): validated EXACT against tas.ram (seeded from frame 0) for frames 0..66
+ * (the opening flat cruise) on the modeled physics addresses: velX, posX (0x50/0x394/0x60/0x3BF/0x4E),
+ * and engine temperature (0x3B6/0x3B5 -- the temperature routine alone matches all 2263 frames). The
+ * position update ($DA58 + $DBFE) and temperature routine ($E36B) are byte-exact ports of the 6502 code.
+ *
+ * NEXT FRONTIER: at frame 67 the bike reaches the first terrain geometry (velZ/posZ/posY begin moving on
+ * the approach to a hill/ramp). Going further needs the TRACK TERRAIN PROFILE (§8 -- the make-or-break
+ * blocker) plus vertical/airborne integration, downhill over-cap (§4g), takeoff/arc/landing (§4c-§4e) --
+ * all stubbed/TODO. Seed frame 0 from tas.ram (Engine::seedFromRam) as a stand-in for the un-modeled
+ * boot sequence. Deferred (track-layout bookkeeping, not core physics): loop counters 0x57/0xED/0x3A4
+ * and the Race Over win flag 0x52.
  */
 
 #include <cstdint>
@@ -71,7 +73,8 @@ public:
     A_SLOPE          = 0x00D4,
     A_VELZ           = 0x00DC,
     A_INTRALOOP      = 0x00ED,
-    A_POSX_SUB       = 0x0394, // posX sub-pixel (accumulates velX/256 per frame)
+    A_POSX_SUB       = 0x0394, // posX sub-pixel (accumulates velX low byte per frame)
+    A_POSX_SUBSUB    = 0x03BF, // posX sub-sub-pixel accumulator (sub_DBFE; carries an extra px into 0x50)
     A_CURRENT_LOOP   = 0x03A4,
     A_TEMP_SUB       = 0x03B5, // engine-temperature subcounter
     A_TEMP           = 0x03B6, // engine temperature
@@ -178,9 +181,9 @@ private:
   // Ground speed, indexed by throttle Y: 0=A(slow), 1=B(turbo), 2=track-finished.
   static constexpr uint16_t kSpeedCap[3]   = {800, 832, 383}; // 0x0320, 0x0340, 0x017F
   static constexpr uint16_t kSpeedAccel[3] = {24, 63, 40};    // tbl_C0BC[0..2]
-  // Engine temperature, indexed by throttle Y: 0=coast, 1=B, 2=A.
-  static constexpr uint8_t  kTempEquil[3]  = {8, 32, 17};     // tbl_D8FB
-  static constexpr uint8_t  kTempRate[3]   = {63, 15, 7};     // tbl_D8F7
+  // Engine temperature, indexed by throttle Y: 0=coast, 1=B, 2=A, 3=A+B (tbl_D8FB/tbl_D8F7).
+  static constexpr uint8_t  kTempEquil[4]  = {8, 32, 17, 17};
+  static constexpr uint8_t  kTempRate[4]   = {63, 15, 7, 7};
 
   void setVelX16(uint16_t v)
   {
@@ -216,27 +219,65 @@ private:
 
   void stepTemperature()
   {
-    const uint8_t thr = _mem[A_THROTTLE];
-    const int     ty  = (thr & 0x80) ? 2 : (thr & 0x40) ? 1 : 0; // A / B / coast
-    const uint16_t sub = (uint16_t)_mem[A_TEMP_SUB] + kTempRate[ty];
-    _mem[A_TEMP_SUB] = (uint8_t)(sub & 0xFF);
-    if (sub > 0xFF) // carry -> step the temperature one notch toward the equilibrium for this throttle
+    // Exact replication of the temperature routine at $E36B-$E3A7 (verified: 0 mismatches vs tas.ram).
+    // Throttle index Y: coast=0, B=1, A=2, A+B=3 (from AND #$C0 then ASL/ROL/ROL, with race_started
+    // forcing 0x80 when not yet started -- 0x4F is 1 throughout this race so that branch is inert here).
+    const uint8_t ab = _mem[A_THROTTLE] & 0xC0;
+    int           y  = 0;
+    if (ab != 0)
     {
-      if (_mem[A_TEMP] < kTempEquil[ty]) _mem[A_TEMP]++;
-      else if (_mem[A_TEMP] > kTempEquil[ty]) _mem[A_TEMP]--;
+      uint8_t a = (_mem[A_RACE_STARTED] != 0) ? ab : 0x80;
+      int c = (a >> 7) & 1; a = (uint8_t)(a << 1);          // ASL
+      for (int i = 0; i < 2; i++) { const int nc = (a >> 7) & 1; a = (uint8_t)((a << 1) | c); c = nc; } // ROL x2
+      y = a;
     }
+    const uint8_t equ = kTempEquil[y];
+    if (_mem[A_TEMP] < equ) // HEAT: subcounter += rate[Y]; on carry, temp++
+    {
+      const uint16_t s = (uint16_t)_mem[A_TEMP_SUB] + kTempRate[y];
+      _mem[A_TEMP_SUB] = (uint8_t)(s & 0xFF);
+      if (s > 0xFF) _mem[A_TEMP]++;
+    }
+    else if (_mem[A_TEMP] > equ) // COOL: subcounter -= 11 (fixed); on borrow, temp-- (if >0)
+    {
+      const int s = (int)_mem[A_TEMP_SUB] - 0x0B;
+      _mem[A_TEMP_SUB] = (uint8_t)(s & 0xFF);
+      if (s < 0 && _mem[A_TEMP] != 0) _mem[A_TEMP]--;
+    }
+    // (Overheat checks at $E3AA -- set stall timer 0x3C / obj 0x3E0 when temp >= 0x20 -- modeled later
+    // if a search path ever approaches the redline; the reference TAS peaks at 29 and never stalls.)
   }
 
   void stepPosX()
   {
-    // posX position within the current block is (scroll_X : posX_sub) as a 16-bit pixel.subpixel; it
-    // advances by velX16 (units of 1/256 px) each frame. Overflow past 0xFFFF crosses a 256-px block
-    // boundary -> toggle the block-X byte (which updateDerived() counts as a transition).
-    const uint32_t pos = ((uint32_t)_mem[A_SCROLL_X] << 8) | _mem[A_POSX_SUB];
-    const uint32_t np  = pos + velX16();
-    if (np > 0xFFFF) _mem[A_CURR_BLOCK_X] ^= 1; // crossed a block boundary
-    _mem[A_SCROLL_X]  = (uint8_t)((np >> 8) & 0xFF);
-    _mem[A_POSX_SUB]  = (uint8_t)(np & 0xFF);
+    // Exact replication of the game's position update (sub_DA58 @ $DA58 + sub_DBFE @ $DBFE), object 0.
+    //
+    // sub_DA58: the per-frame scroll increment 0x60 = velX_hi, plus a carry from accumulating velX_lo
+    // into the sub-pixel byte 0x394:
+    //     0x60   = velX_hi
+    //     0x394 += velX_lo        (CLC -> no carry-in); if it overflows, INC 0x60
+    _mem[A_SCROLL_INC] = _mem[A_VELX_HI];
+    const uint16_t sp = (uint16_t)_mem[A_POSX_SUB] + _mem[A_VELX_LO];
+    _mem[A_POSX_SUB]  = (uint8_t)(sp & 0xFF);
+    if (sp > 0xFF) _mem[A_SCROLL_INC]++;
+
+    // sub_DBFE: rotate 0x60 right by 4 through carry, accumulate into the sub-sub-pixel byte 0x3BF,
+    // then 0x50 += 0x60 + (carry from THAT 0x3BF add -- there is no CLC before the ADC at $DC0D, which
+    // is the source of the occasional "extra" pixel). A carry out of 0x50 toggles the block byte 0x4E.
+    uint8_t a = _mem[A_SCROLL_INC];
+    int     c = a & 1; a = (uint8_t)(a >> 1);              // LSR
+    for (int i = 0; i < 3; i++)                            // ROR x3 (through carry)
+    {
+      const int nc = a & 1;
+      a = (uint8_t)((c << 7) | (a >> 1));
+      c = nc;
+    }
+    const uint16_t ss = (uint16_t)a + _mem[A_POSX_SUBSUB]; // CLC; ADC 0x3BF
+    _mem[A_POSX_SUBSUB] = (uint8_t)(ss & 0xFF);
+    const int carryIn = (ss > 0xFF) ? 1 : 0;
+    const uint16_t px = (uint16_t)_mem[A_SCROLL_INC] + _mem[A_SCROLL_X] + carryIn; // ADC 0x50 (carry-in!)
+    _mem[A_SCROLL_X] = (uint8_t)(px & 0xFF);
+    if (px > 0xFF) _mem[A_CURR_BLOCK_X] ^= 1;             // block boundary -> toggle 0x4E
   }
 
   void updateDerived()
