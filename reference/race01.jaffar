@@ -101,9 +101,9 @@
                 "Label": 1003,
                 "Conditions": [
                     {
-                        "Property": "Bike Pos X",
+                        "Property": "Race Over Flag",
                         "Op": ">",
-                        "Value": 6339.0
+                        "Value": 0
                     }
                 ],
                 "Satisfies": [],

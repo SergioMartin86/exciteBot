@@ -9,7 +9,16 @@ the game from its disassembly + a frame-by-frame TAS RAM dump.
 
 ## 1. Mission & rationale
 
-**Goal:** beat the Excitebike **lap-1 reference TAS** (race 1, "race01a") by ≥1 frame, OR rigorously
+> **CORRECTION (2026-06-26):** the reference TAS in `reference/race01.sol` is the **FULL race — 4 loops, 2262
+> input frames** — not just loop 1. The race **completes at frame 2261** when `Race Over Flag (RAM[0x52])`
+> flips 0→1 (final `Bike Pos X = 12157.328`). `tas.ram` is now the full-race dump: **2263 frames × 2048 B =
+> 4,634,624 B**. The old "lap 1 / `Bike Pos X > 6339` / frame 1468" was the loop-1 boundary milestone — still a
+> useful checkpoint, but the **win is now race completion (`0x52 > 0`)**. The loop-1 physics analysis in
+> §§4–6 below remains valid and presumably repeats across the 4 loops; the macro-structure numbers in §5
+> (jump count, 1469 frames, 50.2% airborne) are **loop-1 only** — re-derive them for the full race from the
+> new `tas.ram` when needed.
+
+**Goal:** beat the Excitebike **full-race reference TAS** (race 1, "race01", 4 loops) by ≥1 frame, OR rigorously
 characterize the limit. Reward must be **EXCLUSIVELY the bike's posX** (no momentum/speed/other metric).
 
 **Why a native model.** The current approach runs a reward-guided BFS state-DB search over the **QuickerNES
@@ -60,7 +69,10 @@ within a frame is at `d[f*2048 + addr]`. All the variables below are single byte
 | 0x004E | curr block X (nametable) | toggles 0/1; used with scroll for absolute X |
 | 0x004F | race_started_flag | |
 | 0x0050 | scroll_X = posX low pixel | |
-| 0x0052 | track_finished_flag | also the "Race Over" flag; set at $DF7B and $EABE |
+| 0x0052 | track_finished_flag = **Race Over Flag** | set at $DF7B and $EABE; flips 0→1 at race completion (the WIN) |
+| 0x0057 | Loops Remaining | counts down across the 4-loop race |
+| 0x03A4 | Current Loop | 0→3 over the full race |
+| 0x00ED | Intra Loop Advance | progress within a loop |
 | 0x005C | THROTTLE/buttons | bit7(0x80)=A(slow), bit6(0x40)=B(turbo/fast); **low 2 bits index the airborne descent table** |
 | 0x0060 | per-frame horizontal scroll increment | derived from velX; feeds scroll_X |
 | 0x0070 | posZ1 (height) | |
@@ -84,7 +96,9 @@ within a frame is at `d[f*2048 + addr]`. All the variables below are single byte
 **Absolute posX (the reward):**
 `posX = blockXTransitions*256 + scroll_X(0x50) + posX2(0x394)/256`, where `blockXTransitions` = a running
 count of 256-px blocks passed (NOT in RAM — maintained externally; increments when 0x004E toggles).
-**Win condition: posX > 6339.0** (sub-pixel). TAS reaches it at **frame 1468**.
+**Win condition: race completed = `Race Over Flag (0x52) > 0`.** The full-race TAS reaches it at **frame 2261**
+(final posX 12157.328). *(Loop/lap structure: `Current Loop` 0x3A4 = 0→3, `Loops Remaining` 0x57; loop-1
+boundary was posX>6339 @ frame 1468.)*
 
 ---
 

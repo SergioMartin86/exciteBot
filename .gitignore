@@ -1,2 +1,25 @@
+# === Copyrighted materials — NEVER commit ===
+# Game ROM (Nintendo)
 *.nes
+# NES disassembly (cyneprepou4uk NES-Games-Disassembly)
 *.asm
+# NOTE: reference TAS movies (*.sol) are LordTom's, licensed Creative Commons
+# (tasvideos.org/1348M) and redistributable — intentionally NOT ignored.
+
+# === RAM dumps / state ===
+*.ram
+*.state
+*.sav
+*.srm
+
+# === Binaries / build artifacts ===
+jaffar-player
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.exe
+*.bin
+*.out
+build/
