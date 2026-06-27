@@ -151,6 +151,8 @@ public:
     0x3B5, 0x3B6, 0x20, 0x3C, 0x3E0,
     // race/bike flags + (read-only) constants the engine reads
     0x98, 0x9C, 0xA0, 0xA4, 0xA8, 0x4F, 0x3F1, 0x3F7,
+    // 0x36C: wheelie/ground-contact latch read across frames by the speed gate (sub_CDEE)
+    0x36C,
     // laps / win
     0x52, 0x57, 0x3A4, 0x3BC,
   };
@@ -373,6 +375,29 @@ private:
     }
   }
 
+  // sub_CDEE (player path, asm CDEE-CE28): the gate the ground speed step consults to decide friction
+  // vs acceleration. Returns true when the step must BRAKE (the routine's nonzero return). Driven by
+  // terrain (0xC0==0xE4), the ground-contact state (0xA4/0x70), and bike height 0xB8, latched through
+  // 0x36C. The height gate (0xB8 >= 0x38, or < 0x08) is the wheelie/lean brake: the reference TAS keeps
+  // its velX-update-frame heights below 0x38, but a search path bounces 0xB8 across it (Down flips velZ),
+  // so omitting this let the search harvest phantom speed. Also maintains the 0x36C latch (CE0A/CE1D).
+  bool speedFrictionGate()
+  {
+    uint8_t* m = _mem;
+    // bra_CE1D path (latch-gated): reached only when NONE of the CE0A conditions hold and the bike
+    // height is in [0x08, 0x38). Terrain 0xE4 / contact-3+posZ1 / height>=0x38 / height<0x08 all fall
+    // through to the CE0A latch-arm below (== brake for the player).
+    if (m[0xC0] != 0xE4 && !(m[0xA4] == 3 && m[0x70] >= 3) && m[0xB8] >= 0x08 && m[0xB8] < 0x38)
+    {
+      if (m[0x36C] == 1) return true;                      // CE1F-CE22: latched -> brake
+      m[0x36C] = 0;                                        // CE24-CE25: clear latch -> accelerate
+      return false;
+    }
+    if (m[0x36C] != 1) m[0x36C] = 2;                       // CE0A-CE12: arm latch (2) unless already 1
+    m[0xFD] = 4;                                           // CE18-CE1A (player, X==0)
+    return true;
+  }
+
   // ---- speed (sub_CD59) ----
   void applyAccel(int y)
   {
@@ -395,6 +420,14 @@ private:
     if (m[0xB0] != 0) { int lean = m[0x5C] & 3; applyFriction(lean == 0 ? 4 : lean + 1); return; }
     uint8_t ab = m[0x5C] & 0xC0;
     if (ab == 0) { applyFriction(0); return; }
+    // sub_CDEE friction gate (asm CD8C-CD93): with the race still running, a height/terrain/contact
+    // condition forces friction(0) over acceleration when velX has a high byte. The gate is consulted
+    // unconditionally here (it maintains the 0x36C latch); only the brake itself is velX_hi-gated.
+    if (m[0x52] == 0)
+    {
+      bool brake = speedFrictionGate();
+      if (brake && m[0x94] != 0) { applyFriction(0); return; }
+    }
     int y = (m[0x5C] & 0x80) ? 0 : 1;
     uint8_t vhi = m[0x94], vlo = m[0x90];
     if (vhi > kCapHi[y] || (vhi == kCapHi[y] && vlo > kCapLo[y])) applyFriction(y + 1);
