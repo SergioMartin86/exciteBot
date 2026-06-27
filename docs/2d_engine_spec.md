@@ -57,8 +57,17 @@ features of block `0x58-1` (track_sections.txt "sec N" = block N; 0x58=N reads b
 The buffer is overwritten by the streaming routine (`sub_ECE4`) AFTER the render samples it within a
 frame, so near column/lane transitions `0xC0` lags the end-of-frame snapshot that `kTrack` was built
 from. Using `kTrack[lane_{i-1}][cumColumn_{i-1}]` for section detection matches 35/36 entries; the
-remaining ~19/2263 mismatches need the per-frame buffer-write order modeled (or `0xC0` extracted with
-the correct streaming phase).
+remaining ~19/2263 mismatches are frames where the snapshot caught a slot mid-recycle.
+
+CHARACTERIZED: `0xC0` is NOT a static function of (lane, column). Keying each run's own per-frame
+`0xC0` by (lane, column) predicts THAT run's section entries perfectly (manual 49/49; TAS 36/36 with
+its own values), but the two runs CONFLICT at 404 cells — i.e. at a given track position the buffer
+holds different bytes depending on how fast the bike got there. So the streaming has a velocity-/
+timing-dependent PHASE (which 64-wide circular slot has been recycled to which far-ahead column). To
+get `0xC0` byte-exact the streaming routine `sub_ECE4` (+ its scroll-driven trigger and the circular
+buffer write order into `ram_0400+`) must be ported. Unlike the opponent RNG (cycle-timing-dependent,
+unmodelable in a fast engine), the streaming is deterministic given the velocity profile, so it IS
+modelable — this is the key remaining track task.
 
 ## 5. Terrain handlers (dispatch by terrain type byte)
 
