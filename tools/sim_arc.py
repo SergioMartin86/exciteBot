@@ -46,12 +46,37 @@ for i in range(1, len(FR)):
     if airMode == 2:
         # sub_DC1A (landing) runs FIRST: groundY = 0x3F1 - 0xBC - 0xB8 (0x3F1 const 0xA0)
         groundY = b(0xA0 - f[0xBC] - f[0xB8])
-        landed = False
-        if not (groundY >= Y8C) and not (Y8C >= 0xA8) and A364 != 0:
-            landed = True
-            airMode = 0
-            land_model.append(i)
+        A388 = f[0x388]  # drive launch-type/bounce flag from dump for now
+        contact = (not (groundY >= Y8C)) and (not (Y8C >= 0xA8)) and A364 != 0
+        if contact:
+            old388 = A388
+            A364 = 0
             Y8C = b(groundY - 1)
+            if old388 != 0:
+                # post-bounce: resolve skipped -> CLEAN final landing
+                airMode = 0; land_model.append(i)
+            else:
+                # first contact: landing-window resolve (driven by dump angle/slope/0x368)
+                ang = f[0xAC]; slope = f[0xD4]; perfect = f[0x368]
+                # NOTE: perfect/crash decision driven from dump for isolation; we model the BOUNCE.
+                if ang == perfect:
+                    airMode = 0; land_model.append(i)   # perfect clean landing
+                else:
+                    # wobble bounce: re-launch (sub_DD38) at halved velZ, airMode stays 2
+                    vlo = f[0x90]; vhi = f[0x94]
+                    z = ((vhi << 8) | b(vlo + 0xAF)) + (1 if (vlo + 0xAF) > 0xFF else 0)*0
+                    zlo = b(vlo + 0xAF); zhi = b(vhi + (1 if vlo + 0xAF > 0xFF else 0))
+                    # halve (0x388 becomes 2):
+                    nz = ((zhi << 8) | zlo) >> 1
+                    A37C = (nz >> 8) & 0xFF; A378 = nz & 0xFF
+                    A380 = 0x0F; A384 = 0
+                    # one arc step (loc_DD1A) this frame:
+                    A38C = TBL_D868[f[0x5C] & 3]
+                    cin = f[0x5C] & 1
+                    t = A380 + A38C + cin; A380 = b(t); c1 = 1 if t > 0xFF else 0
+                    t2 = A384 + c1; A384 = b(t2); c2 = 1 if t2 > 0xFF else 0
+                    sub = Y8C - A37C - (1 - c2); c3 = 1 if sub >= 0 else 0
+                    Y8C = b(b(sub) + A384 + c3)
         else:
             # sub_DCF2 arc: gate -- if (0x5C bit0 set) and 0x4C==0 -> skip arc this frame
             lean_bit0 = f[0x5C] & 1
