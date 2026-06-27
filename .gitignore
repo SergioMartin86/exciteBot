@@ -9,6 +9,8 @@
 # === Extracted game level data (regenerable from the dumps via tools/extract_track_layout.py) ===
 # The full 6-lane track tile array is verbatim game content -- keep it out of the repo like the ROM.
 source/track_layout.hpp
+# Per-section feature lists (regenerable from docs/track_sections.txt via tools/gen_sections_header.py)
+source/track_sections.hpp
 
 # === RAM dumps / state ===
 *.ram
@@ -29,3 +31,6 @@ jaffar-player
 build/
 # NES disassembly includes (cyneprepou4uk, same provenance as *.asm)
 *.inc
+
+# Python
+__pycache__/

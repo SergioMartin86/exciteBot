@@ -49,10 +49,16 @@ This produces `build/source/exciteBike-player`. Replay the reference movie throu
 # then diff native.ram against tas.ram to find the first divergence (the fidelity gate, handoff §9.4)
 ```
 
-> **Status:** scaffold. `engine.hpp` implements the validated pieces (input→`0x5C` decode, the B/A speed
-> caps, air-velX-constant, engine temperature, posX/block integration); the terrain profile (§8),
-> downhill over-cap (§4g), and takeoff/arc/landing (§4c–§4e) are stubbed `// TODO`. The engine therefore
-> does **not** yet reproduce `tas.ram` past the flat cruise — that is the next milestone.
+> **Status:** PREDICTIVE & byte-exact. `engine.hpp` is the full from-scratch model — speed, posX, engine
+> temperature, the 2D track (column counter, lane/posY, section machinery + terrain handlers + held-effect
+> re-dispatch), angle/slope, airborne takeoff/arc/landing/bounce, mud + cooling zones, and the overheat
+> stall — all driven PREDICTIVELY from inputs via the ROM-extracted track (no TAS-path hardcoding). It
+> reproduces `tas.ram` **byte-for-byte on every reward-critical address for all 2263 frames** (final
+> `Bike Pos X = 12157.328`), INCLUDING the win: `Race Over Flag (0x52)` flips at exactly frame 2261
+> (`isWin()` true), with the lap counter (`0x57`/`0x3A4`) exact. Cross-checked vs the emulator on
+> alternative movies via `tools/difftest.py`. Ported from the validated `tools/engine.py`; see
+> `docs/2d_engine_spec.md`. Remaining long tail (TAS-irrelevant): the `0x9C` start/recovery state
+> machine and the crash animation — neither occurs on a posX-optimal path.
 
 ## Reward / win
 - **Reward = `Bike Pos X` ONLY** (no momentum/speed/other metric).

@@ -44,7 +44,7 @@ Per frame, with this frame's whole-pixel advance `0x60` (= velX_hi + sub-pixel c
 posX update): if `0x60 != 0`: `bd = (0x64 - 0x60) & 0xFF`; if `bd==0 || (bd&0x80)`: `0x64=(bd+8)&0xFF`,
 `0xE0=(0xE0+1)&0x3F` (cumColumn++); else `0x64=bd`. 0 mismatches on both dumps.
 
-## 4. Section machinery (sub_E73B) — 99.2% (OPEN: 0xC0 streaming timing)
+## 4. Section machinery (sub_E73B) — BYTE-EXACT (0x58/0xC4/0xC8 = 0 mismatches both dumps)
 
 Per frame (player): `0xC8 += prev0x60`. If `0x58==0`: read `c0` (= terrain marker, see §4.1); if
 `c0>=0x40` and `((c0-0x40)>>2) < 22`: `0x58 = ((c0-0x40)>>2)+1; 0xC4=0; 0xC8 = prev0x64 - 1`. Then scan
@@ -52,22 +52,28 @@ features of block `0x58-1` (track_sections.txt "sec N" = block N; 0x58=N reads b
 `(pos,type)` while `pos <= 0xC8`: dispatch (§5), `0xC4 += 2`; `0xFF` terminator (cursor past end) →
 `0x58=0; 0xD4=0`.
 
-### 4.1 OPEN — `0xC0` source / streaming timing
-`0xC0` is set each frame by the renderer `sub_D0C6` = the terrain buffer `mem[0x400+lane*0x40+0xE0]`.
-The buffer is overwritten by the streaming routine (`sub_ECE4`) AFTER the render samples it within a
-frame, so near column/lane transitions `0xC0` lags the end-of-frame snapshot that `kTrack` was built
-from. Using `kTrack[lane_{i-1}][cumColumn_{i-1}]` for section detection matches 35/36 entries; the
-remaining ~19/2263 mismatches are frames where the snapshot caught a slot mid-recycle.
+### 4.1 `0xC0` source / streaming timing — SOLVED (0 mismatches both dumps)
+`0xC0` is set each frame by the renderer `sub_D0C6` → `sub_E7FC`, which reads
+`buffer[lane][E0]` where `buffer` = the per-lane terrain row at base `tbl_E54E/tbl_E554` =
+`{0x400,0x440,0x480,0x4C0,0x500,0x540}` (6 lanes × 64-byte circular slots), indexed by `0xE0`.
 
-CHARACTERIZED: `0xC0` is NOT a static function of (lane, column). Keying each run's own per-frame
-`0xC0` by (lane, column) predicts THAT run's section entries perfectly (manual 49/49; TAS 36/36 with
-its own values), but the two runs CONFLICT at 404 cells — i.e. at a given track position the buffer
-holds different bytes depending on how fast the bike got there. So the streaming has a velocity-/
-timing-dependent PHASE (which 64-wide circular slot has been recycled to which far-ahead column). To
-get `0xC0` byte-exact the streaming routine `sub_ECE4` (+ its scroll-driven trigger and the circular
-buffer write order into `ram_0400+`) must be ported. Unlike the opponent RNG (cycle-timing-dependent,
-unmodelable in a fast engine), the streaming is deterministic given the velocity profile, so it IS
-modelable — this is the key remaining track task.
+The streaming was EMPIRICALLY characterized from the per-frame buffer snapshots (tools/stream_probe.py):
+each cumColumn increment writes slot `(E0+42)&63 = master[lane][cum+42]` for ALL 6 lanes — a rock-solid
+constant 42-column lookahead (zero variance). So in steady state `buffer[lane][E0] = master[lane][col]`.
+
+The CLOSED FORM that reproduces `0xC0` byte-exact (0 mismatches on 2263 TAS + 5533 manual frames,
+tools/stream_check.py / c0_index.py):
+
+  **`0xC0(frame i) = kTrack[lane_i][cum_{i-1}]`**  — CURRENT frame's lane, PREVIOUS frame's cumColumn.
+
+Why the split: the lane `0x360` is updated EARLY in the frame (sub_E96C) so the render samples the
+current-frame lane; but `0xE0`/cumColumn is updated LATE (sub_E70B, end of frame) so the column index
+is the previous frame's. Equivalently `buffer[lane_i][E0_{i-1}]`. No circular buffer is needed in the
+engine — just keep `kTrack` and index by current lane + previous cumColumn. (The earlier "404 cross-run
+conflicts" were an artifact of keying by the current cum instead of the previous cum at lane changes.)
+
+With this rule, section machinery (sub_E73B) is byte-exact: `0x58/0xC4/0xC8` = 0 mismatches both dumps,
+manual takeoffs 27/27.
 
 ## 5. Terrain handlers (dispatch by terrain type byte)
 
@@ -84,7 +90,10 @@ Strip high bits first: `type & 0x80` → ground-angle handler; else `type & 0x40
   `0x98=0xFF`.
 - **0x00 (E963)**: `0xCC=0; 0xD4=0; 0xB4=0`.
 - Types 01-05,08-0C,0E-0F,10,12,14 (E845/E854/E85D/E86A/E879/E89D/E8BF/E8C6/E8E3/E8EE/E8FF/EA8F/E956):
-  not yet modeled (cosmetic/obstacle variants — port as needed).
+  not yet modeled. NOTE several of these set `0xD4`/`0xB4` via `sub_E893` (`0xD4=0xB4=A`) and `0xCC`,
+  and DO run while airborne (unlike E7A3 which skips when airMode!=0). E.g. type 0x09 (E879) calls
+  sub_E893 with A=4. These are the remaining source of the residual `0xAC`/`0xD4` mismatches in
+  tools/sim.py (see §6.4); the section machinery + takeoff timing is already byte-exact without them.
 
 ## 6. Airborne arc (sub_DD6F) + landing/bounce (sub_DC1A/sub_DCF2) — climb EXACT; landing decision OPEN
 
@@ -115,11 +124,50 @@ On contact: `airMode=0; 0x364=0; oldJ=0x388; 0x388=0; 0x8C=groundY-1`.
 Tables: `tbl_D86C = [03,02,03,02,09,06,08,0F, 03,02,02,02,08,05,07,0F]`,
 `tbl_D87C = [0C,09,0A,07,0C,0C,0C,00, 0C,0A,0B,08,0C,0C,0C,..]`, `tbl_D88B = [06,03,04,02,0B,08,09]`.
 
-### 6.4 OPEN — angle 0xAC
-On the ground, `0xAC` ramps toward target `0x368` by ±1 (sub_DCC7, gated by timer `0x2A`); terrain
-features (E7A3) also set `0xAC` directly. In the AIR the player tilts the bike (Up/Down → `0xAC`) — the
-exact air-angle routine still needs locating. `0xAC` only feeds the perfect-vs-wobble landing decision
-(reward-secondary, but needed for exact landing columns).
+### 6.4 Angle 0xAC + slope 0xD4 — BYTE-EXACT (non-crash) on both dumps
+RESULT (tools/sim.py): TAS `0xAC`/`0xD4` = 0 mismatches (all 2263 frames). Manual `0xD4` = 0; `0xAC` =
+41 residuals, ALL inside the single crash at f2939 (crash animation ramps 0xAC down 0F→05, then recovery
+resets it to 6) — irrelevant to a posX-optimal search (any crashing trajectory is strictly slower → pruned).
+The crash 0xAC animation/recovery (0x98=0xFF state, 0x9C recovery) is intentionally NOT modeled.
+
+Three mechanisms were required to reach exactness:
+1. **sub_E927** (runs right after sub_E733): each frame, for the held effect `0xCC != 0`, re-dispatch
+   `tbl_E6B7[0xCC]` — so a slope set by an E7F2 feature (0xCC=nibble) PERSISTS, re-applying its handler
+   (e.g. CC=3 → handler 0x03 → sub_E893 → `0xD4=0xB4=1`) every frame until 0xCC is cleared (type 0x00).
+   This is the dominant 0xD4 source. The track's E7F2 types {0x42,0x43,0x44,0x45,0x49,0x4A} → CC ∈
+   {2,3,4,5,9,0xA} → handlers {0x02,0x03,0x04,0x05,0x09,0x0A}, all of which set 0xD4 via sub_E893.
+2. **Dispatch handlers set 0xD4 = 0xB4 = A via sub_E893** (UNCONDITIONALLY, no airMode gate):
+   type 0x02→6, 0x03→1, 0x04→5, 0x05→2, 0x09→4, 0x0A→3 (skip if 0xA4==1), 0x00→0.
+3. **Pre-landing airMode**: sub_E733 (handlers) and the sub_CD59 angle tail run BEFORE the late landing
+   (sub_DA26), so they see the START-of-frame airMode (= end of previous frame, +this frame's takeoff),
+   NOT the dump's post-landing end-of-frame 0xB0. This sets `Y = airMode>>1` correctly for the tilt
+   (table index, timer reload) on landing frames.
+
+#### Angle update detail (lean/tilt/wheelie at tail of sub_CD59)
+Runs each frame at the tail of the speed routine (sub_CD59, loc_CDBD onward). `ram_000A = 0x5C & 0x03`
+= the tilt buttons (**R=0x01, L=0x02**; U/D=0x0C are lane-change, handled by sub_E96C). Order:
+- if `0x98` (crash) != 0 → skip all angle.
+- decide LEAN-ACTIVE: if `airMode != 0` → active (air). Else on ground active iff
+  `(0x58|0x52)==0` (not in a section, not finished) AND `(velX_hi!=0 || velX_lo>=0xA0)` (fast enough).
+- if LEAN-ACTIVE and `ram_000A != 0` → **loc_CE83** (player tilt). else if `airMode==0` and
+  `0x368 != 0xAC` → **loc_DCC7** (ground ramp toward rest angle 0x368).
+
+**loc_DCC7 (ground ramp toward 0x368):** if timer `0x2A != 0` → return; else `0x2A = 5` (reload Y),
+then move `0xAC` one step toward `0x368`: if `0xAC==0x368` return; if `0xAC < 0x368` → `0xAC++`; else
+`0xAC -= 1` (DEC,DEC then a shared INC = net −1).
+
+**loc_CE83 (player tilt / wheelie):** if timer `0x26 != 0` → return; `Y = airMode>>1` (0 ground / 1 air);
+`0x26 = tbl_C0D4[Y]` (`tbl_C0D4=[6,4]`). Test `t18 = ram_000A` bit0 (R):
+- R held (bit0=1): move `0xAC` toward `tbl_C0C8[Y]` (`[6,2]`): `==`→ret; `<`→`0xAC++`; `>`→`0xAC--`.
+- else (L held, bit0=0): `0x388 &= 2`; if `0xAC < tbl_C0CA[Y]` (`[0x0A,0x0B]`) → `0xAC++`, return; else
+  WHEELIE: if `(0x5C & 0xC0)==0` (no A/B) → ret; if `airMode!=0` → ret; `0xAC++`; `0x26=0x0D`; if
+  `0xAC >= 0x0D` → crash `0x98=1`, `0x26=0x1A`.
+
+**Rest-angle target 0x368 (sub_DCA0, X=player):** `Y = 0xD4`; if `track_finished==1 &&
+(0x98|0x9C|0x58)==0` → `0x368 = 0x0A`; else `0x368 = tbl_D88B[Y]` (`tbl_D88B=[06,03,04,02,0B,08,09]`);
+then if `0xA4==1` → `0x368 = 6`. Terrain features (E7A3) also set `0xAC` directly to the track nibble.
+`0xAC` feeds the perfect-vs-wobble landing decision (§6.3) → affects landing columns and post-landing
+speed, so it is reward-relevant via landings.
 
 ## 7. Vertical / lane (sub_E96C + input at $EA07/$EA2B) — model known, port pending
 
@@ -131,8 +179,73 @@ Clamps at `0xB8<8` and `0xB8>=0x3A`. Visual `0x8C` (ground) = `~0xA0 - 0xB8` (vi
 
 ## 8. Wheelie — not yet traced (Up/Down on ground → velZ/posZ/angle; over-wheelie crash).
 
-## 9. Port plan
-1. Add the column counter + lane + section machinery + handlers to `engine.hpp` (load `kTrack`).
-2. Resolve §4.1 (0xC0 streaming) and §6.4 (angle) for byte-exactness.
-3. Add the arc + landing/bounce; integrate with the existing speed/posX model.
-4. `python3 tools/validate.py tas` and `... manual` must both match all frames.
+## 8b. Standalone engine + differential testing (tools/engine.py, tools/difftest.py)
+A full standalone Python engine (`tools/engine.py`) runs PURELY from inputs (seeded at frame 0), with
+no dump-peeking — the reference for the C++ port. It combines every routine: column counter, lane
+(sub_E96C incl. the edge clamp + velZ flip `0xDC^0xFE`), section machinery + handlers + sub_E927,
+angle, speed (sub_CD59), temperature, posX (sub_DA58/DBFE), takeoff (sub_DD38), arc (sub_DD6F),
+landing/bounce (sub_DC1A), the climb handlers (sub_E84F/E86F: `0xBC`), the terminator's `0xBC=0`, and
+the mud handler 0x0C (sub_CE5C friction). Key timing facts discovered: (a) lane index `0x360` is
+computed in render and LAGS `0xB8` by one frame (compute at frame START from pre-update 0xB8); (b) the
+angle/section routines see the PRE-landing airMode (landing is late in sub_DA26); (c) the bounce
+re-launch goes through loc_DCFA so `0x384=0` (not velX_hi).
+
+RESULTS:
+- **tas.ram: BYTE-EXACT** standalone on every reward-critical address (posX, velX, sections, angle,
+  slope, airMode, lane, posY, velZ, 0x8C, column) for all 2263 frames. (Only `0x52` race-over flag in
+  the final 2 frames is unmodeled — the loop-completion win trigger.)
+- **manual.ram: reward-exact through f2281** (posX/velX/sections), after which it hits terrain the TAS
+  never uses (a takeoff variant). Earlier divergence is a 1-frame cosmetic 0x8C blip at a BC underflow.
+
+Found + fixed a real bug present in the committed `engine.hpp`: friction with `velX_hi==0` must CLAMP
+velX_lo to 0 (sub_CE58 `bra_CE80`), not wrap to 256−n. Never hit by the always-moving TAS; exposed by
+coast-to-stop in the manual ref / alt movies.
+
+**Differential testing** (`tools/difftest.py` runs a `.sol` through the emulator `jaffar-player` AND
+the engine, diffing every frame; `tools/gen_alts.py` writes suboptimal movies):
+- `race01.sol` (TAS): byte-exact except `0x52` final 2 frames.
+- `alt_coast` (B-pulse + coast): **BYTE-EXACT, 1401 frames** — throttle/friction/coast fully correct.
+- `alt_coast` (B-pulse + coast): **BYTE-EXACT, 1401 frames** — requires the type-0x12 cooling-zone
+  (E8D3: on-ground & !stalled → `0x3B6=8`); without it, temp climbs unbounded and spuriously stalls.
+
+The OVERHEAT STALL is now MODELED (and TAS stays byte-exact incl temp `0x3B6` + stall `0x3C`):
+  - `sub_D310` full timer routine: `0x20` counter gates the slow timers `0x30-0x3D` (so stall timer
+    `0x3C` decrements every 11 frames); fast `0x21-0x2F` (incl angle timers 0x26/0x2A) every frame.
+  - `loc_E3AA` overheat arm (late): `temp(0x3B6) >= 0x20` → `0x3C = 0x3E0 = temp`.
+  - `sub_DD8D` (early): while `0x3C>8` and bike idle → force velX_lo (0, or 0xC0 in section) + drift
+    velZ; at `0x3C==8` → recovery (`temp=5, 0x9C=5, 0x3E0=0, 0x374=5`).
+  - `sub_CD1F` input lock: `0x3E0!=0 && 0x9C!=5` → zero throttle `0x5C` before the speed routine.
+  mashB now matches the FULL stall (was f422, now f699). Remaining mashB/airlean divergence at f699 is
+  the `0x9C` start/recovery state machine (sub_D924 state 5) re-centering the lane (velZ) on recovery exit.
+
+Still UNMODELED long-tail (each TAS-irrelevant — a posX-optimal search never stalls/crashes):
+  - `0x9C` start/recovery state machine (sub_D924) — lane re-center after stall (mashB/airlean f699).
+  - crash trigger on a bad A-throttle landing (alt_throttleA f442) + crash animation/recovery.
+  - more terrain coverage under heavy steering / random play (alt_lanes f251, alt_random f113).
+  - the `0x52` loop-completion win flag (race-over; TAS byte-exact except its final 2 frames).
+
+## 9. Status & port plan
+DONE (byte-exact, both dumps, all non-crash frames): column counter (§3), 0xC0/streaming (§4.1), section
+machinery 0x58/0xC4/0xC8 (§4), terrain handlers + sub_E927 held-effect (§5/§6.4), angle 0xAC + slope 0xD4
+(§6.4), takeoff timing (16/16 TAS, 27/27 manual). Verifiers: tools/sim.py, tools/stream_check.py.
+Only residuals: 41 manual 0xAC frames inside one crash (pruned in a posX search) — see §6.4.
+
+REMAINING: airborne ARC + landing/bounce (§6) and lane movement (§7) are traced & in the Python sims
+(tools/sim_arc.py climb byte-exact) but not yet wired into the C++ engine; wheelie (§8) not traced;
+crash animation/recovery intentionally unmodeled.
+
+Port plan:
+0. DONE: `source/engine.hpp` is the full C++ port of `tools/engine.py` — byte-exact reward vs tas.ram
+   (final posX 12157.328; only 0x52 win-flag differs in the last 2 frames) and byte-exact vs the emulator
+   on alt_coast. Build: `meson setup build && ninja -C build`; validate via `exciteBike-player ...
+   --initialRam tas.ram --dumpRam native.ram`. Track data = `track_layout.hpp` + `track_sections.hpp`
+   (generated/gitignored: tools/extract_track_layout.py + tools/gen_sections_header.py). Dead TAS-path
+   `track_data.hpp` removed; the friction clamp bug is fixed.
+1. DONE in `tools/engine.py` (standalone, byte-exact on TAS), `0xC0 = kTrack[lane_i][cum_(i-1)]`.
+2. WIN FLAG MODELED: race01 is a 3-lap track; lap counter `0x3A4`/`0x57` computed from cumColumn
+   (boundaries at cum 668/1335, the streaming lap-advance); the type-0x08 finish-line feature (section 3,
+   pos 48) sets `0x52=1` when `0x57==0`. `isWin()` flips at frame 2261, byte-exact. Remaining long-tail
+   mechanics (§8b): the `0x9C` start/recovery state machine and crash animation — neither on a posX-optimal
+   (non-crashing, non-stalling) path. (overheat stall, mud, cooling, win all modeled.)
+3. `python3 tools/difftest.py <movie.sol>` cross-checks engine vs emulator on any movie (the fidelity
+   gate generalized beyond the two references).
