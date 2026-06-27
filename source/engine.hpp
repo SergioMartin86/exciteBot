@@ -36,6 +36,8 @@
 #include <cstring>
 #include <cstddef>
 
+#include "track_data.hpp" // generated: airborne posX intervals + §4g over-cap boost posX
+
 namespace excitebike
 {
 
@@ -101,6 +103,7 @@ public:
     _firstPostHook     = true;
     _currentStep       = 0;
     updateDerived();
+    _wasAirborne       = (_mem[A_AIRMODE] != 0);
   }
 
   /// @brief Seed the full 2048-byte RAM image from a real frame-0 snapshot (e.g. the first frame of
@@ -113,6 +116,7 @@ public:
     _firstPostHook     = true; // first updateDerived just latches prevBlockX (no spurious transition)
     _currentStep       = 0;
     updateDerived();
+    _wasAirborne       = (_mem[A_AIRMODE] != 0);
   }
 
   // --- Per-frame advance -----------------------------------------------------------------------
@@ -122,6 +126,19 @@ public:
     // 0) Advance the game cycle (0x4C): a mod-4 counter over the 4 objects (player + 3 opponents).
     //    The player's speed routine is gated on 0x4C == 0 (verified: 0x4C == (frame-1) mod 4).
     _mem[A_GAME_CYCLE] = (uint8_t)((_mem[A_GAME_CYCLE] + 1) & 3);
+
+    // 0b) Terrain handler (track-driven, reward-fidelity-first), evaluated at the START of the frame on
+    //     the bike's current posX (= end of last frame). Set airMode from the track's airborne posX
+    //     intervals, and apply the §4g over-cap +256 velX boost (terrain type 0x13) at a boost launch.
+    //     Must run BEFORE the speed/position update so the boosted velX drives this frame's posX.
+    //     Valid for the forced route because velX is pinned at 832 through the jump phase. (Predictive
+    //     ramp/arc replaces this for search; the intervals ARE the track's ramp geometry.)
+    {
+      const bool air = inAirInterval(_bikePosX);
+      if (air && !_wasAirborne && isBoostLaunch(_bikePosX)) _mem[A_VELX_HI]++; // INC 0x94 (+256)
+      _mem[A_AIRMODE] = air ? 2 : 0;
+      _wasAirborne    = air;
+    }
 
     // 1) Latch the controller into the throttle/lean RAM byte (NES reads MSB-first => bit-reversed).
     _mem[A_THROTTLE] = reverse8(controllerByte);
@@ -228,12 +245,19 @@ private:
     // Player speed routine (sub_CD59 -> accel sub_CE29 / friction sub_CE58), gated by the game cycle:
     // it runs for the player ONLY when 0x4C == 0 (CPX ram_004C; BNE RTS). 0x4C == (frame-1) mod 4.
     if (_mem[A_GAME_CYCLE] != 0) return;
-    // Airborne: velX is ~constant (validated). The exact air-friction path (sub_CD59 $CDB2) is modeled
-    // later; for now hold velX. TODO(§4d air friction edge frames).
-    if (_mem[A_AIRMODE] != 0) return;
+
+    // Airborne friction (sub_CD59 $CDB2 -> sub_CE58): Y = (lean==0) ? 4 : lean+1, lean = 0x5C & 3.
+    // R-lean (1) -> friction[2]=0 (velX held -- why air velX is "constant"); L-lean (2) -> friction[3]=60
+    // (braking, used to slow into the finish); no lean -> friction[4]=28. (Verified vs tas.ram decreases.)
+    if (_mem[A_AIRMODE] != 0)
+    {
+      const int lean = _mem[A_THROTTLE] & 3;
+      applyFriction(lean == 0 ? 4 : lean + 1);
+      return;
+    }
 
     const uint8_t ab = _mem[A_THROTTLE] & 0xC0;
-    if (ab == 0) { applyFriction(0); return; }       // coast -> friction Y=0
+    if (ab == 0) return;                             // ground coast: no-op (velX unchanged, per tas.ram)
     const int y = (_mem[A_THROTTLE] & 0x80) ? 0 : 1; // A (or A+B) -> Y0 cap 800; B only -> Y1 cap 832
 
     const uint8_t vhi = _mem[A_VELX_HI], vlo = _mem[A_VELX_LO];
@@ -308,6 +332,25 @@ private:
     if (px > 0xFF) _mem[A_CURR_BLOCK_X] ^= 1;             // block boundary -> toggle 0x4E
   }
 
+  bool inAirInterval(float x) const
+  {
+    for (size_t i = 0; i < kNumAirIntervals; i++)
+      if (x >= kAirIntervals[i].launchX && x < kAirIntervals[i].landX) return true;
+    return false;
+  }
+
+  bool isBoostLaunch(float x) const
+  {
+    for (size_t i = 0; i < kNumAirIntervals; i++)
+      if (x >= kAirIntervals[i].launchX && x < kAirIntervals[i].landX)
+      {
+        for (size_t b = 0; b < kNumBoosts; b++)
+          if (kAirIntervals[i].launchX == kBoostX[b]) return true;
+        return false;
+      }
+    return false;
+  }
+
   void updateDerived()
   {
     // Mirrors JaffarPlus ExciteBike::stateUpdatePostHook: count real block changes (skipping the very
@@ -322,6 +365,7 @@ private:
   uint8_t  _blockXTransitions;
   uint8_t  _prevBlockX;
   bool     _firstPostHook;
+  bool     _wasAirborne = false;
   uint32_t _currentStep;
   float    _bikePosX;
 };
