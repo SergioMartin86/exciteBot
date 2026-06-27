@@ -6,6 +6,10 @@
 # NOTE: reference TAS movies (*.sol) are LordTom's, licensed Creative Commons
 # (tasvideos.org/1348M) and redistributable — intentionally NOT ignored.
 
+# === Extracted game level data (regenerable from the dumps via tools/extract_track_layout.py) ===
+# The full 6-lane track tile array is verbatim game content -- keep it out of the repo like the ROM.
+source/track_layout.hpp
+
 # === RAM dumps / state ===
 *.ram
 *.state
