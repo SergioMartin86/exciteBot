@@ -27,4 +27,6 @@ static constexpr AirInterval kAirIntervals[] = {
 static constexpr size_t kNumAirIntervals = 16;
 static constexpr float kBoostX[] = { 3792.8906f, 4123.1406f, 4486.6719f, 9806.0312f, 10136.3750f, 10448.7656f };
 static constexpr size_t kNumBoosts = 6;
+static constexpr float kWobbleX[] = { 1361.8281f, 2838.8281f, 10781.5781f, 11755.7344f };
+static constexpr size_t kNumWobble = 4;
 } // namespace excitebike

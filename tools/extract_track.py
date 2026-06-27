@@ -97,6 +97,12 @@ if __name__ == '__main__' and '--emit-header' in sys.argv:
     out.append(f"static constexpr size_t kNumAirIntervals = {len(intervals)};")
     out.append(f"static constexpr float kBoostX[] = {{ {', '.join(f'{x:.4f}f' for x in boosts)} }};")
     out.append(f"static constexpr size_t kNumBoosts = {len(boosts)};")
+    # Wobble (non-perfect touch-and-go) landings: 0x374 goes 0 -> nonzero ($DC7D sets it to 4). While
+    # 0x374 != 0 the speed routine early-exits to friction[0] ($CD66). posX where each is set (start-of-
+    # frame, since the set is read by the NEXT frame's speed routine).
+    wob = [absx[f] for f in range(1, NF) if fr(f)[0x374] != 0 and fr(f-1)[0x374] == 0]
+    out.append(f"static constexpr float kWobbleX[] = {{ {', '.join(f'{x:.4f}f' for x in wob)} }};")
+    out.append(f"static constexpr size_t kNumWobble = {len(wob)};")
     out.append("} // namespace excitebike")
     open('source/track_data.hpp','w').write("\n".join(out)+"\n")
     print(f"wrote source/track_data.hpp: {len(intervals)} air intervals, {len(boosts)} boosts")

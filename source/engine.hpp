@@ -16,21 +16,21 @@
  * MODE: REWARD-FIDELITY-FIRST (per user) -- model exactly what determines posX (the reward); ignore
  * cosmetic state (the ground vertical bob velZ/posZ/posY, sprites, RNG, loop bookkeeping).
  *
- * FIDELITY STATUS (2026-06-27): the REWARD (absolute posX, and velX) matches tas.ram (seeded from frame 0)
- * for 2209/2263 frames; max error 1.78px in the finish-braking tail, final posX within 0.84px. Modeled:
+ * FIDELITY STATUS (2026-06-27): the REWARD is BYTE-EXACT -- absolute posX AND velX match tas.ram
+ * (seeded from frame 0) for ALL 2263/2263 frames (max posX error 0.000000 px; final posX 12157.328).
+ * Modeled:
  *   - position update ($DA58 + $DBFE), byte-exact port;
  *   - game cycle 0x4C (mod-4) gating the player speed routine;
  *   - speed routine (sub_CD59 -> $CE29/$CE58): accel below cap, nothing at cap, friction[Y+1] over cap,
  *     Y = A/A+B->0, B->1; ground coast = no-op; airborne friction Y=(lean==0)?4:lean+1 (R-lean->0 held,
- *     L-lean->60 brake). Tables tbl_C0BC/C0C1/C0CE/C0D1 exact;
+ *     L-lean->60 brake); the 0x374 post-wobble-landing timer early-exit -> friction[0]. Tables exact;
  *   - §4g over-cap: +256 velX (INC 0x94) at terrain type-0x13 launches (applied before the posX update);
- *   - airMode driven by the track's airborne posX intervals (track_data.hpp); temperature ($E36B) exact.
+ *   - airMode + over-cap + wobble events driven by the track (track_data.hpp); temperature ($E36B) exact.
  *
- * KNOWN TAIL ERROR (<2px, frames 2209+): one frame (f2209) uses friction[0]=56 not 60 because the
- * post-landing timer 0x374 (set=4 @$DC7D, decremented each frame) is read before its decrement in
- * sub_CD59's early-exit ($CD66). Acceptable for search-and-verify (model beats are re-checked on the
- * real emulator). NEXT for full fidelity / search: model 0x374; replace track-driven airMode with the
- * predictive arc (sub_DD6F) so jumps are predicted under new inputs. Seed frame 0 from tas.ram.
+ * The track-driven events (airborne intervals, type-0x13 boosts, wobble landings) ARE the track geometry,
+ * extracted on-path from tas.ram (valid: velX is forced through the race). NEXT for SEARCH-capability:
+ * replace these with the predictive arc (sub_DD6F) so jumps/landings are predicted under NEW inputs.
+ * Seed frame 0 from tas.ram (stands in for the un-modeled boot sequence).
  */
 
 #include <cstdint>
@@ -83,6 +83,7 @@ public:
     A_VELZ           = 0x00DC,
     A_INTRALOOP      = 0x00ED,
     A_POSX_SUB       = 0x0394, // posX sub-pixel (accumulates velX low byte per frame)
+    A_WOBBLE_TIMER   = 0x0374, // post-(wobble)-landing timer; while !=0 the speed routine uses friction[0]
     A_POSX_SUBSUB    = 0x03BF, // posX sub-sub-pixel accumulator (sub_DBFE; carries an extra px into 0x50)
     A_CURRENT_LOOP   = 0x03A4,
     A_TEMP_SUB       = 0x03B5, // engine-temperature subcounter
@@ -105,6 +106,7 @@ public:
     _currentStep       = 0;
     updateDerived();
     _wasAirborne       = (_mem[A_AIRMODE] != 0);
+    _wobbleCursor      = 0;
   }
 
   /// @brief Seed the full 2048-byte RAM image from a real frame-0 snapshot (e.g. the first frame of
@@ -118,6 +120,7 @@ public:
     _currentStep       = 0;
     updateDerived();
     _wasAirborne       = (_mem[A_AIRMODE] != 0);
+    _wobbleCursor      = 0;
   }
 
   // --- Per-frame advance -----------------------------------------------------------------------
@@ -161,6 +164,13 @@ public:
 
     // 5) Derived values (mirrors JaffarPlus stateUpdatePostHook): block-transition count + Bike Pos X.
     updateDerived();
+
+    // 6) Post-wobble-landing timer 0x374: set to 4 ($DC7D) when the bike crosses a non-perfect
+    //    touch-and-go landing (track data), then decremented each frame ($DCE3) / cleared on A/B
+    //    ($DCEE). The set then same-frame decrement matches tas (recorded 3 on the set frame).
+    if (_wobbleCursor < kNumWobble && _bikePosX >= kWobbleX[_wobbleCursor]) { _mem[A_WOBBLE_TIMER] = 4; _wobbleCursor++; }
+    if (_mem[A_WOBBLE_TIMER] != 0) { _mem[A_WOBBLE_TIMER]--; if (_mem[A_THROTTLE] & 0xC0) _mem[A_WOBBLE_TIMER] = 0; }
+
     _currentStep++;
   }
 
@@ -246,6 +256,11 @@ private:
     // Player speed routine (sub_CD59 -> accel sub_CE29 / friction sub_CE58), gated by the game cycle:
     // it runs for the player ONLY when 0x4C == 0 (CPX ram_004C; BNE RTS). 0x4C == (frame-1) mod 4.
     if (_mem[A_GAME_CYCLE] != 0) return;
+
+    // sub_CD59 $CD66 early-exit: while the post-wobble-landing timer 0x374 (or crash 0x98) != 0, the
+    // routine skips the normal accel/friction selection and applies friction[0]=56. (0x374 is set at
+    // non-perfect touch-and-go landings; read here at the START of the frame, before its decrement.)
+    if (_mem[A_WOBBLE_TIMER] != 0 || _mem[A_CRASH] != 0) { applyFriction(0); return; }
 
     // Airborne friction (sub_CD59 $CDB2 -> sub_CE58): Y = (lean==0) ? 4 : lean+1, lean = 0x5C & 3.
     // R-lean (1) -> friction[2]=0 (velX held -- why air velX is "constant"); L-lean (2) -> friction[3]=60
@@ -367,6 +382,7 @@ private:
   uint8_t  _prevBlockX;
   bool     _firstPostHook;
   bool     _wasAirborne = false;
+  size_t   _wobbleCursor = 0;
   uint32_t _currentStep;
   float    _bikePosX;
 };
