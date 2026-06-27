@@ -131,12 +131,23 @@ public:
     //    The player's speed routine is gated on 0x4C == 0 (verified: 0x4C == (frame-1) mod 4).
     _mem[A_GAME_CYCLE] = (uint8_t)((_mem[A_GAME_CYCLE] + 1) & 3);
 
-    // 0b) Terrain handler (track-driven, reward-fidelity-first), evaluated at the START of the frame on
-    //     the bike's current posX (= end of last frame). Set airMode from the track's airborne posX
-    //     intervals, and apply the §4g over-cap +256 velX boost (terrain type 0x13) at a boost launch.
-    //     Must run BEFORE the speed/position update so the boosted velX drives this frame's posX.
-    //     Valid for the forced route because velX is pinned at 832 through the jump phase. (Predictive
-    //     ramp/arc replaces this for search; the intervals ARE the track's ramp geometry.)
+    // 1) Latch the controller into the throttle/lean RAM byte (NES reads MSB-first => bit-reversed).
+    _mem[A_THROTTLE] = reverse8(controllerByte);
+
+    // 2) Speed model. CRUCIAL ORDER: the speed routine runs with the airMode from the END of the
+    //    PREVIOUS frame (the game order is speed -> takeoff/landing -> position). So at a landing frame
+    //    the bike is still "airborne" for the friction decision (airborne friction held), and airMode
+    //    only flips to ground afterwards (step 4 below). _mem[A_AIRMODE] still holds last frame's value.
+    stepSpeed();
+
+    // 3) Engine temperature (handoff §4b). Self-managing; not a search lever, modeled for fidelity.
+    stepTemperature();
+
+    // 4) Terrain handler (track-driven, reward-fidelity-first), AFTER the speed routine but BEFORE the
+    //    position update (so a launch's §4g +256 boost drives this frame's posX). Sets airMode from the
+    //    track's airborne posX intervals; applies the over-cap boost at a type-0x13 launch. Evaluated on
+    //    the bike's current posX (= end of last frame). (Predictive ramp/arc replaces this for search;
+    //    the intervals ARE the track's ramp geometry.)
     {
       const bool air = inAirInterval(_bikePosX);
       if (air && !_wasAirborne && isBoostLaunch(_bikePosX)) _mem[A_VELX_HI]++; // INC 0x94 (+256)
@@ -144,25 +155,11 @@ public:
       _wasAirborne    = air;
     }
 
-    // 1) Latch the controller into the throttle/lean RAM byte (NES reads MSB-first => bit-reversed).
-    _mem[A_THROTTLE] = reverse8(controllerByte);
-
-    // 2) Speed model (handoff §4a, §4d). Ground: B/A accel toward the hard caps. Air: velX is constant
-    //    (player air-friction ~0, validated 99.7%). Coast/downhill over-cap is NOT yet traced.
-    stepSpeed();
-
-    // 3) Engine temperature (handoff §4b). Self-managing; not a search lever, modeled for fidelity.
-    stepTemperature();
-
-    // 4) Position integration: posX advances exactly velX/256 per frame (handoff §5), carrying into
+    // 5) Position integration: posX advances exactly velX/256 per frame (handoff §5), carrying into
     //    the block counter (0x4E toggles) at each 256-px boundary.
     stepPosX();
 
-    // TODO(handoff §4c-§4f, §8): terrain following (forces angle/slope from the track profile),
-    // takeoff (sets airMode/launch velZ), airborne arc integration, and landing/wobble resolve.
-    // These require the track terrain profile (the §8 extraction blocker) before they can run.
-
-    // 5) Derived values (mirrors JaffarPlus stateUpdatePostHook): block-transition count + Bike Pos X.
+    // 6) Derived values (mirrors JaffarPlus stateUpdatePostHook): block-transition count + Bike Pos X.
     updateDerived();
 
     // 6) Post-wobble-landing timer 0x374: set to 4 ($DC7D) when the bike crosses a non-perfect
@@ -273,7 +270,7 @@ private:
     }
 
     const uint8_t ab = _mem[A_THROTTLE] & 0xC0;
-    if (ab == 0) return;                             // ground coast: no-op (velX unchanged, per tas.ram)
+    if (ab == 0) { applyFriction(0); return; }       // ground coast -> friction[0]=56 (sub_CD59 $CD83->CDBA)
     const int y = (_mem[A_THROTTLE] & 0x80) ? 0 : 1; // A (or A+B) -> Y0 cap 800; B only -> Y1 cap 832
 
     const uint8_t vhi = _mem[A_VELX_HI], vlo = _mem[A_VELX_LO];
