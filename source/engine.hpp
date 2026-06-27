@@ -127,25 +127,52 @@ public:
   float    bikePosX() const { return _bikePosX; }
   uint8_t  blockXTransitions() const { return _blockXTransitions; }
   uint32_t currentStep() const { return _currentStep; }
+  uint32_t cumColumn() const { return _cum; }
   const uint8_t* lram() const { return _mem; }
   uint8_t        ram(uint16_t a) const { return _mem[a]; }
 
+  // --- Packed working-set serialization ---------------------------------------------------------
+  // Only the RAM bytes the engine actually reads/writes across frames carry state; everything else is
+  // scratch or unmodeled cosmetics. kStateAddrs is that working set (proven complete by the round-trip
+  // test in tools/test_serialize.cpp). The packed State is ~9x smaller than the 2KB RAM image and ~32x
+  // smaller than the emulator's machine state -- the depth advantage the search needs.
+  static constexpr uint16_t kStateAddrs[] = {
+    // game cycle, posX, velX, column
+    0x4C, 0x4E, 0x50, 0x60, 0x64, 0x90, 0x94, 0xE0, 0x394, 0x3BF,
+    // section machinery + terrain-handler persistent state
+    0x58, 0xC4, 0xC8, 0xCC, 0xD0, 0xD4, 0xB4, 0xD8, 0xE4, 0xBC,
+    // angle + its timers
+    0xAC, 0x368, 0x26, 0x2A,
+    // airborne arc / landing
+    0xB0, 0x8C, 0x364, 0x388, 0x378, 0x37C, 0x380, 0x384, 0x38C, 0x374,
+    // lane / posY
+    0xB8, 0xDC, 0x360,
+    // temperature + overheat stall
+    0x3B5, 0x3B6, 0x20, 0x3C, 0x3E0,
+    // race/bike flags + (read-only) constants the engine reads
+    0x98, 0x9C, 0xA0, 0xA4, 0xA8, 0x4F, 0x3F1, 0x3F7,
+    // laps / win
+    0x52, 0x57, 0x3A4, 0x3BC,
+  };
+  static constexpr size_t kStateAddrCount = sizeof(kStateAddrs) / sizeof(kStateAddrs[0]);
+
   struct State
   {
-    uint8_t  mem[LRAM_SIZE];
-    uint32_t cum;
+    uint8_t  packed[kStateAddrCount];
+    uint16_t cum;                 // cumulative column (<= 1376, fits in 16 bits)
     uint8_t  blockXTransitions, prevBlockX, firstPostHook;
     uint32_t currentStep;
   };
   void serialize(State& s) const
   {
-    std::memcpy(s.mem, _mem, LRAM_SIZE);
-    s.cum = _cum; s.blockXTransitions = _blockXTransitions; s.prevBlockX = _prevBlockX;
+    for (size_t i = 0; i < kStateAddrCount; i++) s.packed[i] = _mem[kStateAddrs[i]];
+    s.cum = (uint16_t)_cum; s.blockXTransitions = _blockXTransitions; s.prevBlockX = _prevBlockX;
     s.firstPostHook = _firstPostHook ? 1 : 0; s.currentStep = _currentStep;
   }
   void deserialize(const State& s)
   {
-    std::memcpy(_mem, s.mem, LRAM_SIZE);
+    std::memset(_mem, 0, LRAM_SIZE);  // non-state bytes are scratch -> restore to deterministic zero
+    for (size_t i = 0; i < kStateAddrCount; i++) _mem[kStateAddrs[i]] = s.packed[i];
     _cum = s.cum; _blockXTransitions = s.blockXTransitions; _prevBlockX = s.prevBlockX;
     _firstPostHook = s.firstPostHook != 0; _currentStep = s.currentStep;
     updateDerived();

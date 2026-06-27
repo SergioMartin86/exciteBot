@@ -59,6 +59,11 @@ This produces `build/source/exciteBike-player`. Replay the reference movie throu
 > alternative movies via `tools/difftest.py`. Ported from the validated `tools/engine.py`; see
 > `docs/2d_engine_spec.md`. Remaining long tail (TAS-irrelevant): the `0x9C` start/recovery state
 > machine and the crash animation — neither occurs on a posX-optimal path.
+>
+> **State size: 64 bytes** (`sizeof(Engine::State)`) — a packed serialization of the 54-address working
+> set the engine actually touches, vs the emulator's ~2 KB machine state (~32× smaller). Proven complete
+> by `tools/test_serialize.cpp` (`meson test`): restoring at every frame and running to the end is
+> byte-identical. This tiny, hashable state is the search-depth advantage the project is built around.
 
 ## Reward / win
 - **Reward = `Bike Pos X` ONLY** (no momentum/speed/other metric).
