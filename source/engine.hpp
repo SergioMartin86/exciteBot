@@ -16,20 +16,21 @@
  * MODE: REWARD-FIDELITY-FIRST (per user) -- model exactly what determines posX (the reward); ignore
  * cosmetic state (the ground vertical bob velZ/posZ/posY, sprites, RNG, loop bookkeeping).
  *
- * FIDELITY STATUS (2026-06-26): the REWARD addresses (velX 0x90/0x94, posX 0x50/0x394/0x60/0x3BF/0x4E)
- * are validated EXACT against tas.ram (seeded from frame 0) for frames 0..340 -- the entire run up to the
- * first jump -- with a fully PREDICTIVE model:
+ * FIDELITY STATUS (2026-06-27): the REWARD (absolute posX, and velX) matches tas.ram (seeded from frame 0)
+ * for 2209/2263 frames; max error 1.78px in the finish-braking tail, final posX within 0.84px. Modeled:
  *   - position update ($DA58 + $DBFE), byte-exact port;
- *   - game cycle 0x4C (mod-4 counter) gating the player speed routine;
- *   - speed routine: accel ($CE29) below cap, nothing at cap, friction[Y+1] ($CE58) over cap, coast
- *     friction[0]; Y = A/A+B->0, B->1 (sub_CD59). Tables tbl_C0BC/C0C1/C0CE/C0D1 exact;
- *   - temperature ($E36B) byte-exact (matches all 2263 frames in isolation).
+ *   - game cycle 0x4C (mod-4) gating the player speed routine;
+ *   - speed routine (sub_CD59 -> $CE29/$CE58): accel below cap, nothing at cap, friction[Y+1] over cap,
+ *     Y = A/A+B->0, B->1; ground coast = no-op; airborne friction Y=(lean==0)?4:lean+1 (R-lean->0 held,
+ *     L-lean->60 brake). Tables tbl_C0BC/C0C1/C0CE/C0D1 exact;
+ *   - §4g over-cap: +256 velX (INC 0x94) at terrain type-0x13 launches (applied before the posX update);
+ *   - airMode driven by the track's airborne posX intervals (track_data.hpp); temperature ($E36B) exact.
  *
- * NEXT (to continue past frame 340): the bike launches off the first ramp at frame 339. velX is constant
- * while airborne, so reward stays exact through jumps ONCE airMode is known -- but the engine doesn't yet
- * model airMode transitions, so it wrongly applies ground coast-friction in the air (832->776 at f341).
- * Need: ramp detection + the airborne arc (§4d, un-traced) to drive airMode, and the downhill over-cap
- * velX boosts (§4g, frames 1063/1132/1196/1980/2022 -- final velX 2272). Seed frame 0 from tas.ram.
+ * KNOWN TAIL ERROR (<2px, frames 2209+): one frame (f2209) uses friction[0]=56 not 60 because the
+ * post-landing timer 0x374 (set=4 @$DC7D, decremented each frame) is read before its decrement in
+ * sub_CD59's early-exit ($CD66). Acceptable for search-and-verify (model beats are re-checked on the
+ * real emulator). NEXT for full fidelity / search: model 0x374; replace track-driven airMode with the
+ * predictive arc (sub_DD6F) so jumps are predicted under new inputs. Seed frame 0 from tas.ram.
  */
 
 #include <cstdint>
