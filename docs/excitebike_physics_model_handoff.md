@@ -161,12 +161,19 @@ boundary was posX>6339 @ frame 1468.)*
   in the air. LATENT OOB: nibble 0/1 → angle-2 underflows → OOB table read, but the TAS angles are always
   2..11 (flat=6), never 0/1, so race01 never triggers it.
 
-### 4g. The downhill / over-cap speed (the 1088→1544 escalation)
-- velX past the 832 flat cap is **purely slope (track-geometry) determined and input-independent**: the TAS
-  COASTS downhills (so the clamp doesn't run) and gravity builds velX to each slope's terminal velocity
-  (observed plateaus: 832 → 1088 → 1288 → 1344 → **1544**, the steepest, held 273 frames into the finish).
-- **NOT yet fully traced:** the exact code/arithmetic that ADDS to velX (0x90/0x94) on downhills beyond the
-  clamp. This + the exact arc fixed-point (4d) are the two pieces of arithmetic the model still needs nailed.
+### 4g. The downhill / over-cap speed — **TRACED (2026-06-27)**
+- **The over-cap velX boost is a discrete +256 per downhill-ramp launch, NOT gradual gravity.** Terrain
+  **type 0x13** (`ofs_002_E8E7_13` @ $E8E7): if not already airborne, `JMP loc_DCFE` → `INC ram_0094`
+  (velX_hi += 1 ⇒ **velX += 256**) → falls into the takeoff (`loc_DCFA`→`sub_DD38`). The normal ramp
+  (type 0x06, `ofs_002_E934_06`) launches via `loc_DD06`/`loc_DCFA` with **no** velX change. So a downhill
+  jump = a type-0x13 tile that boosts velX by exactly one high-byte (256) at takeoff.
+- Full-race velX escalation (from `tools/extract_track.py`): **832 → 1088 → 1288 → 1544 → 1788 → 2044 →
+  2272** (final). The +256 steps are the type-0x13 launches (frames 1063/1132/1196/1980/2022 are 5 of them);
+  intermediate non-256 deltas are ordinary friction/accel between launches. Was "1544" in the loop-1-only
+  analysis; the full 4-loop race compounds to **2272**.
+- This means velX past 832 is **terrain-type (0x13) determined**, gated only by "not already airborne" and
+  velX_hi != 0 — input-independent. The remaining un-traced piece is now just the **arc fixed-point (4d)**
+  (airtime/landing), needed to drive airMode; velX itself is fully understood.
   Likely tied to slope (0xD4) and/or 0x60 (the scroll increment). **First reverse-engineering task.**
 
 ---
