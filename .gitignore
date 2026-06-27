@@ -23,3 +23,5 @@ jaffar-player
 *.bin
 *.out
 build/
+# NES disassembly includes (cyneprepou4uk, same provenance as *.asm)
+*.inc
