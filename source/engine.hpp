@@ -247,8 +247,12 @@ private:
           if (m[0xA0] != 2) takeoff(0);
         }
         break;
-      case 0x13: // downhill E8E7
-        if (m[0x98] == 0) { m[0x94] = bb(m[0x94] + 1); if (m[0xB0] == 0) takeoff(0); }
+      case 0x13: // downhill E8E7: airborne (0xB0!=0) -> RTS, NO velX boost (gravity boosts velX only
+                 // on the ground; in the air velX is MAINTAINED). Grounded -> loc_DCFE: velX_hi++
+                 // (unless stalled 0x98) then takeoff. Omitting the air gate let a jump harvest phantom
+                 // downhill speed (search-found big jumps over a downhill diverged from real HW).
+        if (m[0xB0] != 0) break;
+        if (m[0x98] == 0) { m[0x94] = bb(m[0x94] + 1); takeoff(0); }
         break;
       case 0x00: m[0xCC] = 0; m[0xD4] = 0; m[0xB4] = 0; break;
       case 0x07: // crash E818
